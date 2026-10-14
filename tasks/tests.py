@@ -15,7 +15,7 @@ class BaseCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         R = User.Role
-        cls.dept = Department.objects.create(name="Engineering")
+        cls.dept = Department.objects.create(name="Engineering", uses_technologies=True)
         cls.other_dept = Department.objects.create(name="Sales")
         cls.admin = User.objects.create_user("admin1", password="x", role=R.ADMIN)
         cls.manager = User.objects.create_user("mgr", password="x", role=R.MANAGER, department=cls.dept)

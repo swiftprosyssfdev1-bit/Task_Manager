@@ -9,7 +9,7 @@
   <thead><tr><th>Department</th><th>Manager</th><th>Employees</th><th>Projects</th><th>Tasks</th><th>Status</th><th></th></tr></thead>
   <tbody>
   {% for d in departments %}
-    <tr><td><a href="{% url 'project_list' %}?department={{ d.pk }}">{{ d.name }}</a>{% if d.description %}<div class="text-muted small">{{ d.description }}</div>{% endif %}</td>
+    <tr><td><a href="{% url 'project_list' %}?department={{ d.pk }}">{{ d.name }}</a>{% if d.uses_technologies %} <span class="badge text-bg-info ms-1" title="Projects and tasks in this department record technologies">Technologies</span>{% endif %}{% if d.description %}<div class="text-muted small">{{ d.description }}</div>{% endif %}</td>
       <td>{% for m in d.managers %}{{ m.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">No manager yet</span>{% endfor %}</td>
       <td>{{ d.employee_count }}</td><td>{{ d.project_count }}</td><td>{{ d.task_count }}</td>
       <td>{% if d.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>

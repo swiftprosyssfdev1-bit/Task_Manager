@@ -31,6 +31,9 @@ class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
+    uses_technologies = models.BooleanField(
+        "Track technologies", default=False,
+        help_text="Tick for departments whose projects and tasks record the technologies used (e.g. Software).")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -58,6 +61,10 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     objects = ProjectQuerySet.as_manager()
+
+    @property
+    def uses_technologies(self):
+        return bool(self.department_id and self.department.uses_technologies)
 
     class Meta:
         ordering = ["name"]

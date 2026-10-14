@@ -46,7 +46,7 @@ Later phases (reports/exports, notifications) build on these models.
 - **Admin:** creates departments, managers and employees; assigns each employee a department and a manager; can move an employee to another manager, or a manager to another department (their team moves with them). View-only on projects and tasks.
 - **Manager:** sees only the employees assigned to them (read-only list, with each employee's report). Cannot create departments, managers or employees. Creates projects and tasks, and can only use their own employees as team members and assignees.
 - **Employee:** works on tasks assigned to them.
-- Technologies are manager-managed records (the admin does not see them).
+- Technologies are manager-managed records (the admin does not see them), and only for departments with **Track technologies** switched on (set by the admin on the department; Software has it on after upgrading). In other departments the Technologies page, and every technologies field, column and chip, is hidden.
 
 ## Rules
 - A manager's department and projects: projects always belong to the manager's department. A manager with no department cannot create projects until the admin assigns one (Managers > Edit).
@@ -60,7 +60,7 @@ Later phases (reports/exports, notifications) build on these models.
 - Managers correct work logs with a required reason; each changed field is saved in an audit trail
 - Attachments are stored in `media/` and downloaded only through an access-checked view. Do not expose `media/` in your web server config
 - Manager review of Pending Review tasks (approve or send back with feedback), plus comments on tasks
-- Technologies are manager-managed records (the admin does not see them); employees pick them on tasks and work logs
+- Technologies (Software department only, see Rules above): managers maintain the list; employees pick them on tasks and work logs
 - Deadline-change history (old date, new date, reason) so analytics can compare against approved dates
 
 ## What Phase 3 adds

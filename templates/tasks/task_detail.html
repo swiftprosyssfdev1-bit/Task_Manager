@@ -42,7 +42,7 @@
 
     <div class="card mb-3"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-semibold">Work logs</span><span class="text-muted">Total {{ total_hours|floatformat:2 }} h</span></div>
       <div class="table-responsive"><table class="table align-middle mb-0 small">
-        <thead><tr><th>Date</th><th>Time</th><th class="text-end">Hours</th><th>Work performed</th><th>Technologies</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Time</th><th class="text-end">Hours</th><th>Work performed</th>{% if task.uses_technologies %}<th>Technologies</th>{% endif %}<th></th></tr></thead>
         <tbody>
         {% for log in worklogs %}
           <tr>
@@ -50,13 +50,13 @@
             <td>{% if log.start_time %}{{ log.start_time|time:"H:i" }}&ndash;{{ log.end_time|time:"H:i" }}{% else %}-{% endif %}</td>
             <td class="text-end">{{ log.duration_hours }}</td>
             <td style="white-space:pre-line">{{ log.description }}{% if log.remarks %}<div class="text-muted">{{ log.remarks }}</div>{% endif %}</td>
-            <td>{% for t in log.technologies.all %}<span class="badge text-bg-light border">{{ t.name }}</span> {% endfor %}</td>
+            {% if task.uses_technologies %}<td>{% for t in log.technologies.all %}<span class="badge text-bg-light border">{{ t.name }}</span> {% endfor %}</td>{% endif %}
             <td class="text-end text-nowrap">
               {% if log.attachment %}<a href="{% url 'worklog_attachment' log.pk %}">Attachment</a>{% endif %}
               {% if user.can_assign_tasks %}<a class="ms-2" href="{% url 'worklog_update' log.pk %}">Correct</a>{% endif %}
             </td>
           </tr>
-        {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">No work logged yet.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="{% if task.uses_technologies %}6{% else %}5{% endif %}" class="text-center text-muted py-3">No work logged yet.</td></tr>{% endfor %}
         </tbody></table></div>
     </div>
 
@@ -123,7 +123,7 @@
       <dt class="col-5">End date</dt><dd class="col-7">{{ task.end_date|date:"d M Y"|default:"-" }}</dd>
       <dt class="col-5">Completed</dt><dd class="col-7">{{ task.completed_date|date:"d M Y"|default:"-" }}</dd>
       <dt class="col-5">Hours logged</dt><dd class="col-7">{{ total_hours|floatformat:2 }}</dd>
-      <dt class="col-5">Technologies</dt><dd class="col-7">{% for t in task.technologies.all %}<span class="badge text-bg-light border">{{ t.name }}</span> {% empty %}-{% endfor %}</dd>
+      {% if task.uses_technologies %}<dt class="col-5">Technologies</dt><dd class="col-7">{% for t in task.technologies.all %}<span class="badge text-bg-light border">{{ t.name }}</span> {% empty %}-{% endfor %}</dd>{% endif %}
       <dt class="col-5">Updated</dt><dd class="col-7 mb-0">{{ task.updated_at|date:"d M Y H:i" }}</dd>
     </dl></div></div>
 

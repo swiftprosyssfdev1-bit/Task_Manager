@@ -76,14 +76,15 @@ class EmployeeReportView(LoginRequiredMixin, TemplateView):
             tasks = tasks.filter(project=form.cleaned_data["project"])
         stats = services.employee_stats(tasks, start, end, holidays, today, ensure_users=[employee])[0]
         completed = services.completed_metrics(tasks, start, end, holidays)
+        show_technologies = bool(employee.department_id and employee.department.uses_technologies)
         technologies = (Technology.objects.filter(tasks__in=[m.task.pk for m in completed])
-                        .annotate(n=Count("tasks")).order_by("-n", "name"))
+                        .annotate(n=Count("tasks")).order_by("-n", "name")) if show_technologies else []
         open_tasks = tasks.filter(status__in=Task.OPEN_STATUSES)
         by_status = Counter(open_tasks.values_list("status", flat=True))
         by_priority = Counter(open_tasks.values_list("priority", flat=True))
         ctx.update(
             employee=employee, filter_form=form, start=start, end=end, stats=stats, completed=completed,
-            technologies=technologies,
+            technologies=technologies, show_technologies=show_technologies,
             projects=Project.objects.visible_to(user).filter(memberships__user=employee).select_related("manager"),
             workload_status=[(label, by_status.get(v, 0)) for v, label in Task.Status.choices
                              if v in Task.OPEN_STATUSES],

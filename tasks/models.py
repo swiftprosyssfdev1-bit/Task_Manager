@@ -158,6 +158,11 @@ class Task(models.Model):
         """Total hours is always summed from work logs, never stored."""
         return self.work_logs.aggregate(total=sum_hours())["total"]
 
+    @property
+    def uses_technologies(self):
+        """Technologies are tracked only for tasks whose project belongs to a department that uses them."""
+        return self.project.uses_technologies
+
     def can_log_work(self, user):
         return user.pk == self.assigned_to_id and not self.is_archived and self.status != self.Status.CANCELLED
 

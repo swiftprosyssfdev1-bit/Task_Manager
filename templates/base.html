@@ -63,7 +63,7 @@ function toggleNav(name, btn) {
       {% if user.is_admin_role %}<a class="side-link {% if '/managers/' in p %}active{% endif %}" href="{% url 'manager_list' %}"><i class="bi bi-person-badge"></i>Managers</a>{% endif %}
       <a class="side-link {% if '/employees/' in p %}active{% endif %}" href="{% url 'user_list' %}"><i class="bi bi-people"></i>Employees</a>
       {% if user.is_admin_role %}<a class="side-link {% if '/departments/' in p %}active{% endif %}" href="{% url 'department_list' %}"><i class="bi bi-diagram-3"></i>Departments</a>{% endif %}
-      {% if user.is_manager_role %}<a class="side-link {% if '/technologies/' in p %}active{% endif %}" href="{% url 'technology_list' %}"><i class="bi bi-cpu"></i>Technologies</a>{% endif %}
+      {% if user.is_manager_role and user.tracks_technologies %}<a class="side-link {% if '/technologies/' in p %}active{% endif %}" href="{% url 'technology_list' %}"><i class="bi bi-cpu"></i>Technologies</a>{% endif %}
       </div>
       {% endif %}
     </nav>

@@ -11,14 +11,14 @@
   </div>
 </div>
 <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-  <thead><tr><th>Department</th><th>Project</th><th>Manager</th><th>Technologies</th><th>Tasks</th><th style="width:220px">Completion</th><th>Status</th></tr></thead>
+  <thead><tr><th>Department</th><th>Project</th><th>Manager</th>{% if user.tracks_technologies %}<th>Technologies</th>{% endif %}<th>Tasks</th><th style="width:220px">Completion</th><th>Status</th></tr></thead>
   <tbody>
   {% for p in projects %}
     <tr>
       <td>{{ p.department.name|default:"-" }}</td>
       <td><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a> <span class="text-muted small">{{ p.code }}</span></td>
       <td>{{ p.manager.display_name|default:"-" }}</td>
-      <td>{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}-{% endfor %}</td>
+      {% if user.tracks_technologies %}<td>{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}-{% endfor %}</td>{% endif %}
       <td>{{ p.task_done }} / {{ p.task_total }}</td>
       <td><div class="progress" style="height:8px"><div class="progress-bar" style="width:{% widthratio p.task_done p.task_total 100 %}%"></div></div></td>
       <td>{% if p.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>

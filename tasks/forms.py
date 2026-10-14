@@ -116,6 +116,9 @@ class TaskEmployeeForm(BootstrapMixin, forms.ModelForm):
         self.fields["status"].choices = [c for c in S.choices if c[0] in allowed or c[0] == current]
         if current in Task.TERMINAL_STATUSES:
             self.fields["status"].disabled = True
+        if not self.instance.uses_technologies:
+            del self.fields["technologies"]  # the task's department does not record technologies
+            return
         techs = Q(is_active=True)
         if self.instance.pk:
             techs |= Q(tasks=self.instance)
@@ -160,8 +163,11 @@ class WorkLogForm(BootstrapMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["duration_hours"].required = False
         self.fields["duration_hours"].help_text = "Leave blank to calculate from the start and end time."
-        self.fields["technologies"].queryset = Technology.objects.filter(is_active=True)
-        self.fields["technologies"].help_text = "Hold Ctrl (Cmd on Mac) to select several."
+        if self.instance.task.uses_technologies:
+            self.fields["technologies"].queryset = Technology.objects.filter(is_active=True)
+            self.fields["technologies"].help_text = "Hold Ctrl (Cmd on Mac) to select several."
+        else:
+            del self.fields["technologies"]  # the task's department does not record technologies
         if not self.initial.get("work_date"):
             self.initial["work_date"] = timezone.localdate()
 

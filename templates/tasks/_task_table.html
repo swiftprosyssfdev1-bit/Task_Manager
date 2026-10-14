@@ -3,7 +3,7 @@
   <thead><tr>
     <th>ID</th>{% if not compact %}<th>Date</th>{% endif %}{% if user.can_manage_tasks %}<th>Employee</th>{% endif %}
     <th>Task</th><th>Project</th><th>Assigned</th><th>Est. date</th><th>Completed</th><th>Days taken</th><th>Status</th>
-    {% if not compact %}<th>Technologies</th>{% endif %}<th class="text-end">Hours</th>
+    {% if not compact and user.tracks_technologies %}<th>Technologies</th>{% endif %}<th class="text-end">Hours</th>
     {% if not compact %}<th>Remarks</th><th></th>{% endif %}
   </tr></thead>
   <tbody>
@@ -19,7 +19,7 @@
       <td>{{ t.completed_date|date:"d M Y"|default:"-" }}</td>
       <td><span class="day-pill{% if t.days_taken is not None %} done{% endif %}">{{ t.duration_label }}</span></td>
       <td><span class="badge text-bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
-      {% if not compact %}<td>{% for tech in t.technologies.all %}<span class="badge text-bg-light border">{{ tech.name }}</span> {% empty %}-{% endfor %}</td>{% endif %}
+      {% if not compact and user.tracks_technologies %}<td>{% for tech in t.technologies.all %}<span class="badge text-bg-light border">{{ tech.name }}</span> {% empty %}-{% endfor %}</td>{% endif %}
       <td class="text-end">{{ t.logged_hours|floatformat:2 }}</td>
       {% if not compact %}<td class="text-truncate" style="max-width:200px">{{ t.remarks|default:"-" }}</td>
       <td class="text-end">{% if not user.is_admin_role %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'task_update' t.pk %}">Update</a>{% endif %}</td>{% endif %}

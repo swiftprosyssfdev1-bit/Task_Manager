@@ -10,7 +10,7 @@
   {% endif %}
 </div>
 {% if project.description %}<p class="mb-2">{{ project.description }}</p>{% endif %}
-<div class="mb-3"><span class="text-muted small me-1">Technologies:</span>{% for t in technologies %}<span class="tech-chip">{{ t.name }}</span>{% empty %}<span class="text-muted small">none set</span>{% endfor %}</div>
+{% if project.uses_technologies %}<div class="mb-3"><span class="text-muted small me-1">Technologies:</span>{% for t in technologies %}<span class="tech-chip">{{ t.name }}</span>{% empty %}<span class="text-muted small">none set</span>{% endfor %}</div>{% endif %}
 
 <div class="row g-3 mb-3">
   <div class="col-6 col-md-3"><div class="mini-stat tone-primary"><div class="stat-icon"><i class="bi bi-people"></i></div><div><div class="stat-label">Team members</div><div class="stat-value">{{ members|length }}</div></div></div></div>

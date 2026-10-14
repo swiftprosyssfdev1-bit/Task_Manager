@@ -34,7 +34,7 @@
         <div class="meta">{% if p.department %}{{ p.department.name }} &middot; {% endif %}{{ p.code }} &middot; {{ p.manager.display_name|default:"No manager" }}</div></div>
       {% if p.days_running %}<span class="day-pill" title="Days since the project started or its first task">Day {{ p.days_running }}</span>{% endif %}
     </div>
-    <div class="mt-2">{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}<span class="meta">No technologies set</span>{% endfor %}</div>
+    {% if p.department.uses_technologies %}<div class="mt-2">{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}<span class="meta">No technologies set</span>{% endfor %}</div>{% endif %}
     <div class="d-flex justify-content-between meta mt-2 mb-1"><span>{{ p.task_done }} / {{ p.task_total }} tasks done</span><span>{{ p.percent }}%</span></div>
     <div class="progress" style="height:7px"><div class="progress-bar bg-success" style="width:{{ p.percent }}%"></div></div>
     <div class="d-flex justify-content-between align-items-center mt-3">

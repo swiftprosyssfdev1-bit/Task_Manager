@@ -40,6 +40,13 @@ class User(AbstractUser):
         return self.role in (self.Role.ADMIN, self.Role.MANAGER)
 
     @property
+    def tracks_technologies(self):
+        """Whether this user's department records technologies. The admin spans departments, so always True."""
+        if self.is_admin_role:
+            return True
+        return bool(self.department_id and self.department.uses_technologies)
+
+    @property
     def can_assign_tasks(self):
         """Only managers create projects and assign tasks. Admin is view-only on those."""
         return self.role == self.Role.MANAGER

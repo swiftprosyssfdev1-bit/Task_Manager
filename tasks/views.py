@@ -374,9 +374,15 @@ class AttachmentDeleteView(LoginRequiredMixin, View):
         return back
 
 
-# ---------------------------------------------------------------- technologies (manager only)
-class TechnologyListView(RoleRequiredMixin, ListView):
+# ---------------------------------------------------------------- technologies (managers of departments that track them)
+class TechnologyAccessMixin(RoleRequiredMixin):
     allowed_roles = MANAGER_ONLY
+
+    def test_func(self):
+        return super().test_func() and self.request.user.tracks_technologies
+
+
+class TechnologyListView(TechnologyAccessMixin, ListView):
     template_name = "tasks/technology_list.html"
     context_object_name = "technologies"
 
@@ -384,8 +390,7 @@ class TechnologyListView(RoleRequiredMixin, ListView):
         return Technology.objects.annotate(task_count=Count("tasks", distinct=True))
 
 
-class TechnologyCreateView(RoleRequiredMixin, TitleMixin, SuccessMessageMixin, CreateView):
-    allowed_roles = MANAGER_ONLY
+class TechnologyCreateView(TechnologyAccessMixin, TitleMixin, SuccessMessageMixin, CreateView):
     form_class = TechnologyForm
     template_name = "form.html"
     title = "Add technology"
@@ -393,8 +398,7 @@ class TechnologyCreateView(RoleRequiredMixin, TitleMixin, SuccessMessageMixin, C
     success_message = "Technology added."
 
 
-class TechnologyUpdateView(RoleRequiredMixin, TitleMixin, SuccessMessageMixin, UpdateView):
-    allowed_roles = MANAGER_ONLY
+class TechnologyUpdateView(TechnologyAccessMixin, TitleMixin, SuccessMessageMixin, UpdateView):
     model = Technology
     form_class = TechnologyForm
     template_name = "form.html"

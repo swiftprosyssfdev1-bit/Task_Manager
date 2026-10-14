@@ -80,7 +80,7 @@
 </div>
 
 <div class="row g-3 mb-3">
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header bg-white fw-semibold">Open workload</div>
+  <div class="col-lg-{% if show_technologies %}4{% else %}6{% endif %}"><div class="card h-100"><div class="card-header bg-white fw-semibold">Open workload</div>
     <div class="card-body">
       <div class="small-note mb-1">By status</div>
       {% for label, n in workload_status %}<div class="d-flex justify-content-between small"><span>{{ label }}</span><span>{{ n }}</span></div>{% endfor %}
@@ -88,11 +88,13 @@
       {% for label, n in workload_priority %}<div class="d-flex justify-content-between small"><span>{{ label }}</span><span>{{ n }}</span></div>{% endfor %}
       {% if stats.high_workload %}<div class="mt-3"><span class="badge text-bg-warning">High workload: {{ stats.open_now }} open tasks</span></div>{% endif %}
     </div></div></div>
+  {% if show_technologies %}
   <div class="col-lg-4"><div class="card h-100"><div class="card-header bg-white fw-semibold">Technologies used <span class="small-note fw-normal">(completed tasks)</span></div>
     <div class="card-body">
       {% for t in technologies %}<span class="badge text-bg-light border me-1 mb-1">{{ t.name }} &times; {{ t.n }}</span>{% empty %}<span class="text-muted small">None recorded.</span>{% endfor %}
     </div></div></div>
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header bg-white fw-semibold">Project allocation</div>
+  {% endif %}
+  <div class="col-lg-{% if show_technologies %}4{% else %}6{% endif %}"><div class="card h-100"><div class="card-header bg-white fw-semibold">Project allocation</div>
     <div class="card-body">
       {% for p in projects %}<div class="small"><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a> <span class="text-muted">&middot; {{ p.manager.display_name|default:"no manager" }}</span></div>{% empty %}<span class="text-muted small">Not a member of any project you can see.</span>{% endfor %}
     </div></div></div>

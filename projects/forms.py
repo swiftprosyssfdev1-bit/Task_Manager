@@ -14,7 +14,7 @@ from .models import Department, Project, ProjectAttachment, ProjectMembership
 class DepartmentForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Department
-        fields = ["name", "description", "is_active"]
+        fields = ["name", "description", "uses_technologies", "is_active"]
 
 
 class ProjectForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
@@ -51,9 +51,12 @@ class ProjectForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
             self.fields["team_members"].queryset = User.objects.filter(
                 role=User.Role.EMPLOYEE, is_active=True).order_by("first_name", "username")
             self._init_department_field()
-        self.fields["technologies"].queryset = Technology.objects.filter(is_active=True)
-        self.fields["technologies"].required = False
-        self.fields["technologies"].help_text = "Technologies the team must use. Missing one? Add it under Technologies in the sidebar."
+        if user is not None and not user.tracks_technologies:
+            del self.fields["technologies"]  # this department does not record technologies
+        else:
+            self.fields["technologies"].queryset = Technology.objects.filter(is_active=True)
+            self.fields["technologies"].required = False
+            self.fields["technologies"].help_text = "Technologies the team must use. Missing one? Add it under Technologies in the sidebar."
         if self.instance.pk:
             self.fields["team_members"].initial = list(
                 self.instance.memberships.values_list("user_id", flat=True))
