@@ -25,6 +25,10 @@ from .models import (Task, TaskAttachment, TaskComment, TaskCommentAttachment, T
 from projects.models import ProjectAttachment
 
 
+MISSING_FILE_MESSAGE = ("This file is missing from the server's media folder, so it cannot be downloaded. "
+                        "Ask the person to upload it again.")
+
+
 # ---------------------------------------------------------------- tasks
 class TaskListView(LoginRequiredMixin, ListView):
     template_name = "tasks/task_list.html"
@@ -309,8 +313,12 @@ class WorkLogAttachmentView(LoginRequiredMixin, View):
         log = get_object_or_404(TaskWorkLog.objects.filter(task__in=Task.objects.visible_to(request.user)), pk=pk)
         if not log.attachment:
             raise Http404
-        return FileResponse(log.attachment.open("rb"), as_attachment=True,
-                            filename=os.path.basename(log.attachment.name))
+        try:
+            handle = log.attachment.open("rb")
+        except OSError:  # record exists but the file is gone from the media folder
+            messages.error(request, MISSING_FILE_MESSAGE)
+            return redirect("task_detail", pk=log.task_id)
+        return FileResponse(handle, as_attachment=True, filename=os.path.basename(log.attachment.name))
 
 
 # ---------------------------------------------------------------- attached documents
@@ -342,8 +350,9 @@ class AttachmentDownloadView(LoginRequiredMixin, View):
         att = get_object_or_404(_attachment_queryset(request.user, kind), pk=pk)
         try:
             handle = att.file.open("rb")
-        except FileNotFoundError:
-            raise Http404("The stored file is missing.")
+        except OSError:
+            messages.error(request, MISSING_FILE_MESSAGE)
+            return redirect(request.META.get("HTTP_REFERER") or "task_list")
         return FileResponse(handle, as_attachment=True, filename=att.basename)
 
 

@@ -188,3 +188,23 @@ class AttachmentTests(BaseCase):
         self.assertEqual(r.status_code, 302)
         self.assertEqual(self.t1.attachments.get().name, "late.pdf")
         self.assertContains(self.client.get(reverse("task_detail", args=[self.t1.pk])), "late.pdf")
+
+
+@override_settings(MEDIA_ROOT=TMP)
+class MissingFileTests(BaseCase):
+    def test_missing_worklog_file_redirects_instead_of_500(self):
+        from decimal import Decimal
+        from .models import TaskWorkLog
+        log = TaskWorkLog.objects.create(task=self.t1, employee=self.emp1, work_date=self.t1.assign_date,
+                                         duration_hours=Decimal("1"), description="x",
+                                         attachment="worklogs/2026/10/gone.png")
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("worklog_attachment", args=[log.pk]), follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "missing from the server")
+
+    def test_missing_new_attachment_file_redirects_instead_of_500(self):
+        att = ProjectAttachment.objects.create(project=self.project, name="gone.pdf", size=1, file="attachments/gone.pdf")
+        self.client.force_login(self.manager)
+        r = self.client.get(reverse("attachment_download", args=["project", att.pk]))
+        self.assertEqual(r.status_code, 302)
