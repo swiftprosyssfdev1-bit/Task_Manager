@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <h1>Hello, {{ user.first_name|default:user.username }} 👋</h1>
+    <div class="sub">{% now "l, d F Y" %} &middot; {% if user.can_manage_tasks %}{% if user.department %}{{ user.department.name }} &middot; {% endif %}Team overview{% else %}Your work at a glance{% endif %}</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if user.can_assign_tasks %}
+      <a class="btn btn-light" href="{% url 'project_create' %}"><i class="bi bi-folder-plus me-1"></i>New project</a>
+      <a class="btn btn-accent" href="{% url 'task_create' %}"><i class="bi bi-plus-lg me-1"></i>Assign daily task</a>
+    {% elif user.is_employee_role %}
+      <a class="btn btn-light" href="{% url 'employee_report' user.pk %}"><i class="bi bi-graph-up me-1"></i>My report</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% for label, value, icon, tone in cards %}
+  <div class="col-6 col-md-4 col-xl"><div class="mini-stat tone-{{ tone }}">
+    <div class="stat-icon"><i class="bi {{ icon }}"></i></div>
+    <div><div class="stat-label">{{ label }}</div><div class="stat-value">{{ value }}</div></div>
+  </div></div>
+  {% endfor %}
+</div>
+
+<div class="section-title">Projects <a class="view-all" href="{% url 'project_list' %}">View all <i class="bi bi-arrow-right"></i></a></div>
+<div class="row g-3 mb-4">
+  {% for p in project_cards %}
+  <div class="col-md-6 col-xl-4"><div class="proj-card">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div><h3><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a></h3>
+        <div class="meta">{% if p.department %}{{ p.department.name }} &middot; {% endif %}{{ p.code }} &middot; {{ p.manager.display_name|default:"No manager" }}</div></div>
+      {% if p.days_running %}<span class="day-pill" title="Days since the project started or its first task">Day {{ p.days_running }}</span>{% endif %}
+    </div>
+    <div class="mt-2">{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}<span class="meta">No technologies set</span>{% endfor %}</div>
+    <div class="d-flex justify-content-between meta mt-2 mb-1"><span>{{ p.task_done }} / {{ p.task_total }} tasks done</span><span>{{ p.percent }}%</span></div>
+    <div class="progress" style="height:7px"><div class="progress-bar bg-success" style="width:{{ p.percent }}%"></div></div>
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div class="team-dots">{% for m in p.team_list|slice:":5" %}<span class="dot" title="{{ m.display_name }}">{{ m.display_name|slice:":1"|upper }}</span>{% endfor %}{% if p.team_size > 5 %}<span class="dot">+{{ p.team_size|add:"-5" }}</span>{% endif %}</div>
+      <span class="meta">{{ p.team_size }} member{{ p.team_size|pluralize }}</span>
+    </div>
+  </div></div>
+  {% empty %}
+  <div class="col-12"><div class="card"><div class="card-body text-center text-muted py-4">
+    No projects yet.{% if user.can_assign_tasks %} <a href="{% url 'project_create' %}">Create the first project</a>.{% endif %}</div></div></div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12"><div class="card h-100"><div class="card-header">Today's tasks</div>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Task</th>{% if user.can_manage_tasks %}<th>Employee</th>{% endif %}<th>Project</th><th>Status</th><th>Days</th></tr></thead>
+      <tbody>
+      {% for t in today_list %}
+        <tr><td class="task-title text-truncate"><a href="{% url 'task_detail' t.pk %}">{{ t.title }}</a></td>
+          {% if user.can_manage_tasks %}<td>{{ t.assigned_to.display_name }}</td>{% endif %}
+          <td>{{ t.project.name|default:"-" }}</td>
+          <td><span class="badge text-bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+          <td><span class="day-pill{% if t.days_taken is not None %} done{% endif %}">{{ t.duration_label }}</span></td></tr>
+      {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Nothing assigned for today.</td></tr>{% endfor %}
+      </tbody></table></div></div></div>
+</div>
+
+{% if charts.workload %}
+<div class="row g-3 mb-4">
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header">Employee workload <span class="small-note fw-normal">(open tasks)</span></div>
+    <div class="card-body"><div class="chart-box sm"><canvas id="chWorkload"></canvas></div></div></div></div>
+  <div class="col-xl-6">{% include "analytics/_side_lists.html" %}</div>
+</div>
+{% else %}
+<div class="mb-4">{% include "analytics/_side_lists.html" %}</div>
+{% endif %}
+
+<div class="card"><div class="card-header">Recent tasks</div>
+{% include "tasks/_task_table.html" with tasks=recent_tasks compact=True %}
+</div>
+{{ charts|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}{% include "analytics/_charts_js.html" %}{% endblock %}

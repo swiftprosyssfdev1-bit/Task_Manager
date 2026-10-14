@@ -1,0 +1,20 @@
+<div class="row g-3 h-100">
+{% for title, items in side_lists %}
+  <div class="{% if charts.workload %}col-12{% else %}col-lg-6{% endif %}"><div class="card h-100">
+    <div class="card-header bg-white fw-semibold">{{ title }}</div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <tbody>
+      {% for t in items %}
+        <tr>
+          <td class="ps-3"><a href="{% url 'task_detail' t.pk %}">{{ t.display_id }}</a></td>
+          <td class="text-truncate" style="max-width:220px">{{ t.title }}</td>
+          <td class="text-muted small">{% if user.can_manage_tasks %}{{ t.assigned_to.display_name }}{% else %}{{ t.project.name|default:"-" }}{% endif %}</td>
+          <td class="text-end pe-3 small">{{ t.est_date|date:"d M"|default:"-" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td class="text-center text-muted py-3">Nothing here.</td></tr>
+      {% endfor %}
+      </tbody></table></div>
+  </div></div>
+{% endfor %}
+</div>

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8">
+<div class="card"><div class="card-body p-4">
+  <h1 class="h4 mb-4">{{ title }}</h1>
+  <form method="post" novalidate{% if form.is_multipart %} enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="row g-3">
+    {% for f in form %}
+      <div class="{% if f.widget_type == 'textarea' or f.widget_type == 'checkboxselectmultiple' %}col-12{% else %}col-md-6{% endif %}">
+        {% if f.widget_type == 'checkbox' %}
+          <div class="form-check">{{ f }}<label class="form-check-label" for="{{ f.id_for_label }}">{{ f.label }}</label></div>
+        {% else %}
+          <label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{% if f.widget_type == 'checkboxselectmultiple' %}<div class="check-grid" data-field="{{ f.html_name }}">{{ f }}</div>{% else %}{{ f }}{% endif %}
+        {% endif %}
+        {% if f.help_text %}<div class="form-text">{{ f.help_text|safe }}</div>{% endif %}
+        {% for e in f.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    </div>
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-primary">Save changes</button>
+      <a class="btn btn-outline-secondary" href="javascript:history.back()">Cancel</a>
+    </div>
+  </form>
+</div></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Employee form: only offer managers of the department that was picked.
+(function () {
+  var dept = document.getElementById('id_department'), boss = document.getElementById('id_manager');
+  if (!dept || !boss) return;
+  function filter() {
+    Array.prototype.forEach.call(boss.options, function (o) {
+      if (!o.value) return;
+      var ok = !dept.value || o.getAttribute('data-department') === dept.value;
+      o.hidden = !ok; o.disabled = !ok;
+    });
+    var cur = boss.options[boss.selectedIndex];
+    if (cur && cur.value && cur.disabled) boss.value = '';
+  }
+  dept.addEventListener('change', filter);
+  boss.addEventListener('change', function () {
+    var o = boss.options[boss.selectedIndex], d = o && o.getAttribute('data-department');
+    if (d && dept.value !== d) { dept.value = d; filter(); }
+  });
+  filter();
+})();
+</script>
+{% if project_members %}
+{{ project_members|json_script:"project-members" }}
+{{ project_techs|json_script:"project-techs" }}
+{{ project_depts|json_script:"project-depts" }}
+<script>
+(function () {
+  var members = JSON.parse(document.getElementById('project-members').textContent);
+  var techs = JSON.parse(document.getElementById('project-techs').textContent);
+  var depts = JSON.parse(document.getElementById('project-depts').textContent);
+  var dsel = document.getElementById('id_department');
+  var sel = document.getElementById('id_project');
+  var grid = document.querySelector('[data-field="assignees"]');
+  if (!sel || !grid) return;
+  var note = document.createElement('div');
+  note.className = 'text-muted small mt-1'; note.style.display = 'none';
+  note.textContent = 'This project has no team members yet. Add them in Projects > Edit project.';
+  grid.parentNode.insertBefore(note, grid.nextSibling);
+  function tick(box, wanted) { box.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = wanted.indexOf(cb.value) !== -1; }); }
+  function apply(initial) {
+    var pid = sel.value, ids = (members[pid] || []).map(String), tids = (techs[pid] || []).map(String), shown = 0;
+    grid.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+      var ok = ids.indexOf(cb.value) !== -1;
+      cb.closest('label').style.display = ok ? '' : 'none';
+      if (!ok) cb.checked = false; else shown++;
+    });
+    note.style.display = (pid && !shown) ? '' : 'none';
+    var tg = document.querySelector('[data-field="technologies"]');
+    if (tg && (!initial || !tg.querySelector('input:checked'))) tick(tg, tids);
+  }
+  function filterProjects() {
+    if (!dsel) return;
+    var d = dsel.value;
+    Array.prototype.forEach.call(sel.options, function (o) {
+      if (!o.value) return;
+      var ok = !d || String(depts[o.value]) === d;
+      o.hidden = !ok; o.disabled = !ok;
+    });
+    var cur = sel.options[sel.selectedIndex];
+    if (cur && cur.value && cur.disabled) { sel.value = ''; apply(false); }
+  }
+  if (dsel) dsel.addEventListener('change', filterProjects);
+  sel.addEventListener('change', function () {
+    var d = depts[sel.value];
+    if (dsel && d && dsel.value !== String(d)) { dsel.value = String(d); filterProjects(); }
+    apply(false);
+  });
+  filterProjects();
+  apply(true);
+})();
+</script>
+{% endif %}
+{% endblock %}

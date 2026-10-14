@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.display_name }} - report{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h4 mb-0">{{ employee.display_name }}</h1>
+    <div class="text-muted small">{{ employee.designation|default:"Employee" }}{% if employee.employee_code %} &middot; {{ employee.employee_code }}{% endif %} &middot; {{ start|date:"d M Y" }} to {{ end|date:"d M Y" }}</div>
+  </div>
+  {% if not is_self %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'team_analytics' %}">Back to analytics</a>{% endif %}
+</div>
+<form method="get" class="card card-body mb-3"><div class="row g-2 align-items-end">
+  {% for f in filter_form %}
+    <div class="col-6 col-md-3"><label class="form-label small mb-1" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}
+      {% for e in f.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+  {% endfor %}
+  <div class="col-auto d-flex gap-2"><button class="btn btn-secondary">Apply</button><a class="btn btn-outline-secondary" href="{% url 'employee_report' employee.pk %}">This month</a></div>
+</div></form>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-4 col-xl"><div class="card"><div class="card-body py-3"><div class="text-muted small">Assigned</div><div class="stat-value">{{ stats.assigned }}</div></div></div></div>
+  <div class="col-6 col-md-4 col-xl"><div class="card"><div class="card-body py-3"><div class="text-muted small">Completed</div><div class="stat-value">{{ stats.completed }}</div></div></div></div>
+  <div class="col-6 col-md-4 col-xl"><div class="card"><div class="card-body py-3"><div class="text-muted small">Completion rate</div><div class="stat-value">{% if stats.completion_rate is None %}-{% else %}{{ stats.completion_rate }}%{% endif %}</div></div></div></div>
+  <div class="col-6 col-md-4 col-xl"><div class="card"><div class="card-body py-3"><div class="text-muted small">On time</div><div class="stat-value">{% if stats.on_time_pct is None %}-{% else %}{{ stats.on_time_pct }}%{% endif %}</div>
+    <div class="small-note">{% if stats.on_time_orig_pct is None %}no original dates{% else %}{{ stats.on_time_orig_pct }}% vs original date{% endif %}</div></div></div></div>
+  <div class="col-6 col-md-4 col-xl"><div class="card"><div class="card-body py-3"><div class="text-muted small">Overdue now</div><div class="stat-value">{{ stats.overdue_now }}</div></div></div></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-3"><div class="text-muted small">Avg calendar days</div><div class="stat-value">{{ stats.avg_calendar|default_if_none:"-" }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-3"><div class="text-muted small">Avg business days</div><div class="stat-value">{{ stats.avg_business|default_if_none:"-" }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-3"><div class="text-muted small">Avg hours / task</div><div class="stat-value">{{ stats.avg_hours|default_if_none:"-" }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-3"><div class="text-muted small">Hours logged (period)</div><div class="stat-value">{{ stats.logged_hours|floatformat:2 }}</div></div></div></div>
+</div>
+
+
+
+
+<div class="card mb-3">
+  <div class="card-header bg-white fw-semibold">Completed in this period</div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr>
+      <th>ID</th><th>Task</th><th>Project</th><th>Assigned</th><th>Est. date</th><th>Completed</th>
+      <th class="text-end">Est. days</th><th class="text-end">Actual days</th><th class="text-end">Business days</th>
+      <th class="text-end">Delay</th><th class="text-end">Early</th><th class="text-end">Variance</th><th class="text-end">Hours</th><th>Context</th>
+    </tr></thead>
+    <tbody>
+    {% for m in completed %}
+      <tr>
+        <td><a href="{% url 'task_detail' m.task.pk %}">{{ m.task.display_id }}</a></td>
+        <td class="text-truncate" style="max-width:220px">{{ m.task.title }}</td>
+        <td>{{ m.task.project.name|default:"-" }}</td>
+        <td>{{ m.task.assign_date|date:"d M Y" }}</td>
+        <td>{{ m.task.est_date|date:"d M Y"|default:"-" }}</td>
+        <td>{{ m.task.completed_date|date:"d M Y" }}</td>
+        <td class="text-end">{{ m.d.estimated|default_if_none:"-" }}</td>
+        <td class="text-end">{{ m.d.actual_calendar }}</td>
+        <td class="text-end">{{ m.d.actual_business }}</td>
+        <td class="text-end">{% if m.d.delay_days is None %}-{% elif m.d.delay_days %}<span class="text-danger">{{ m.d.delay_days }}</span>{% else %}0{% endif %}</td>
+        <td class="text-end">{% if m.d.days_early is None %}-{% else %}{{ m.d.days_early }}{% endif %}</td>
+        <td class="text-end">{% if m.d.variance is None %}-{% else %}{{ m.d.variance|stringformat:"+d" }}{% endif %}</td>
+        <td class="text-end">{{ m.hours|floatformat:2 }}</td>
+        <td>
+          {% if m.d.on_time is None %}<span class="badge text-bg-light border">No est. date</span>
+          {% elif m.d.on_time %}<span class="badge text-bg-success">On time</span>
+          {% else %}<span class="badge text-bg-danger">Late</span>{% endif %}
+          {% if m.deadline_revised %}<span class="badge text-bg-info" title="Est. date was changed after assignment">Date revised</span>{% endif %}
+          {% if m.reassigned %}<span class="badge text-bg-secondary" title="Task was reassigned">Reassigned</span>{% endif %}
+          {% if m.was_blocked %}<span class="badge text-bg-warning" title="Task was Blocked at some point">Was blocked</span>{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="14" class="text-center text-muted py-4">No tasks completed in this period.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="card-footer bg-white small-note">
+    Est. days = est. date minus assign date. Actual days = completed date minus assign date; business days skip weekends and listed holidays.
+    Variance = actual minus estimated. Hours come from work logs, so they measure effort and can differ widely from elapsed days.
+    A task completed on its assign date counts as 0 days. On time is judged against the current est. date; the summary also shows the result against the original date.
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header bg-white fw-semibold">Open workload</div>
+    <div class="card-body">
+      <div class="small-note mb-1">By status</div>
+      {% for label, n in workload_status %}<div class="d-flex justify-content-between small"><span>{{ label }}</span><span>{{ n }}</span></div>{% endfor %}
+      <div class="small-note mt-3 mb-1">By priority</div>
+      {% for label, n in workload_priority %}<div class="d-flex justify-content-between small"><span>{{ label }}</span><span>{{ n }}</span></div>{% endfor %}
+      {% if stats.high_workload %}<div class="mt-3"><span class="badge text-bg-warning">High workload: {{ stats.open_now }} open tasks</span></div>{% endif %}
+    </div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header bg-white fw-semibold">Technologies used <span class="small-note fw-normal">(completed tasks)</span></div>
+    <div class="card-body">
+      {% for t in technologies %}<span class="badge text-bg-light border me-1 mb-1">{{ t.name }} &times; {{ t.n }}</span>{% empty %}<span class="text-muted small">None recorded.</span>{% endfor %}
+    </div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header bg-white fw-semibold">Project allocation</div>
+    <div class="card-body">
+      {% for p in projects %}<div class="small"><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a> <span class="text-muted">&middot; {{ p.manager.display_name|default:"no manager" }}</span></div>{% empty %}<span class="text-muted small">Not a member of any project you can see.</span>{% endfor %}
+    </div></div></div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header bg-white fw-semibold">Task history <span class="small-note fw-normal">(latest 50)</span></div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>ID</th><th>Task</th><th>Project</th><th>Assigned</th><th>Est. date</th><th>Completed</th><th>Status</th><th class="text-end">Hours</th></tr></thead>
+    <tbody>
+    {% for t in history %}
+      <tr>
+        <td><a href="{% url 'task_detail' t.pk %}">{{ t.display_id }}</a></td>
+        <td class="text-truncate" style="max-width:260px">{{ t.title }}</td>
+        <td>{{ t.project.name|default:"-" }}</td>
+        <td>{{ t.assign_date|date:"d M Y" }}</td>
+        <td>{{ t.est_date|date:"d M Y"|default:"-" }}{% if t.is_overdue %} <span class="badge text-bg-danger">Overdue</span>{% endif %}</td>
+        <td>{{ t.completed_date|date:"d M Y"|default:"-" }}</td>
+        <td><span class="badge text-bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+        <td class="text-end">{{ t.hours|floatformat:2 }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="text-center text-muted py-4">No tasks.</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+<p class="small-note">These numbers describe delivery and effort. They do not capture task complexity, shared work or time lost to blockers, so use them as context for a conversation, not as a ranking.</p>
+{{ charts|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}{% include "analytics/_charts_js.html" %}{% endblock %}

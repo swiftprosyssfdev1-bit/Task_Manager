@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ task.display_id }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <div class="text-muted small">{{ task.display_id }}</div>
+    <h1 class="h4 mb-1">{{ task.title }}</h1>
+    <span class="badge text-bg-{{ task.status_color }}">{{ task.get_status_display }}</span>
+    <span class="badge text-bg-{{ task.priority_color }}">{{ task.get_priority_display }} priority</span>
+    {% if task.is_overdue %}<span class="badge text-bg-danger">Overdue</span>{% endif %}
+    {% if task.is_archived %}<span class="badge text-bg-dark">Archived</span>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    {% if can_log_work %}<a class="btn btn-success btn-sm" href="{% url 'worklog_create' task.pk %}">Log work</a>{% endif %}
+    {% if not user.is_admin_role %}<a class="btn btn-primary btn-sm" href="{% url 'task_update' task.pk %}">Update task</a>{% endif %}
+    {% if user.can_assign_tasks %}
+    <form method="post" action="{% url 'task_archive' task.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary btn-sm">{% if task.is_archived %}Restore{% else %}Archive{% endif %}</button></form>
+    {% endif %}
+  </div>
+</div>
+
+{% if review_form %}
+<div class="card border-info mb-3"><div class="card-body">
+  <h2 class="h6">Review submitted work</h2>
+  <form method="post" action="{% url 'task_review' task.pk %}" class="row g-2">{% csrf_token %}
+    <div class="col-md-4">{{ review_form.decision }}</div>
+    <div class="col-md-6">{{ review_form.feedback }}</div>
+    <div class="col-md-2"><button class="btn btn-info w-100">Save review</button></div>
+  </form>
+</div></div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-body"><h2 class="h6">Description</h2><p class="mb-0" style="white-space:pre-line">{{ task.description }}</p></div></div>
+
+    <div class="card mb-3"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-semibold">Work logs</span><span class="text-muted">Total {{ total_hours|floatformat:2 }} h</span></div>
+      <div class="table-responsive"><table class="table align-middle mb-0 small">
+        <thead><tr><th>Date</th><th>Time</th><th class="text-end">Hours</th><th>Work performed</th><th>Technologies</th><th></th></tr></thead>
+        <tbody>
+        {% for log in worklogs %}
+          <tr>
+            <td>{{ log.work_date|date:"d M Y" }}<div class="text-muted">{{ log.employee.display_name }}</div></td>
+            <td>{% if log.start_time %}{{ log.start_time|time:"H:i" }}&ndash;{{ log.end_time|time:"H:i" }}{% else %}-{% endif %}</td>
+            <td class="text-end">{{ log.duration_hours }}</td>
+            <td style="white-space:pre-line">{{ log.description }}{% if log.remarks %}<div class="text-muted">{{ log.remarks }}</div>{% endif %}</td>
+            <td>{% for t in log.technologies.all %}<span class="badge text-bg-light border">{{ t.name }}</span> {% endfor %}</td>
+            <td class="text-end text-nowrap">
+              {% if log.attachment %}<a href="{% url 'worklog_attachment' log.pk %}">Attachment</a>{% endif %}
+              {% if user.can_assign_tasks %}<a class="ms-2" href="{% url 'worklog_update' log.pk %}">Correct</a>{% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">No work logged yet.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div>
+
+    {% if worklog_audits %}
+    <div class="card mb-3"><div class="card-header bg-white fw-semibold">Work log corrections</div>
+      <ul class="list-group list-group-flush small">
+      {% for a in worklog_audits %}
+        <li class="list-group-item"><strong>{{ a.worklog.work_date|date:"d M Y" }}</strong>: {{ a.field }} changed from "{{ a.old_value|default:'empty' }}" to "{{ a.new_value|default:'empty' }}"<br><span class="text-muted">{{ a.changed_by.display_name|default:"-" }}, {{ a.changed_at|date:"d M Y H:i" }}. Reason: {{ a.reason }}</span></li>
+      {% endfor %}
+      </ul></div>
+    {% endif %}
+
+    <div class="card mb-3"><div class="card-header bg-white fw-semibold">Comments</div>
+      <ul class="list-group list-group-flush">
+      {% for c in comments %}
+        <li class="list-group-item"><div class="small text-muted">{{ c.author.display_name|default:"-" }}, {{ c.created_at|date:"d M Y H:i" }}{% if c.kind != 'comment' %} <span class="badge text-bg-info">{{ c.get_kind_display }}</span>{% endif %}</div><div style="white-space:pre-line">{{ c.body }}</div></li>
+      {% empty %}<li class="list-group-item text-muted small">No comments yet.</li>{% endfor %}
+      </ul>
+      <div class="card-body border-top"><form method="post" action="{% url 'task_comment' task.pk %}">{% csrf_token %}{{ comment_form.body }}<button class="btn btn-secondary btn-sm mt-2">Post comment</button></form></div>
+    </div>
+
+    {% if task.backup or task.remarks %}
+    <div class="card"><div class="card-body">
+      {% if task.backup %}<h2 class="h6">Backup details</h2><p style="white-space:pre-line">{{ task.backup }}</p>{% endif %}
+      {% if task.remarks %}<h2 class="h6">Remarks</h2><p class="mb-0" style="white-space:pre-line">{{ task.remarks }}</p>{% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-body"><dl class="row mb-0 small">
+      <dt class="col-5">Employee</dt><dd class="col-7">{{ task.assigned_to.display_name }}</dd>
+      <dt class="col-5">Assigned by</dt><dd class="col-7">{{ task.assigned_by.display_name|default:"-" }}</dd>
+      <dt class="col-5">Project</dt><dd class="col-7">{{ task.project.name|default:"-" }}</dd>
+      <dt class="col-5">Assign date</dt><dd class="col-7">{{ task.assign_date|date:"d M Y" }}</dd>
+      <dt class="col-5">Est. date</dt><dd class="col-7">{{ task.est_date|date:"d M Y"|default:"-" }}</dd>
+      <dt class="col-5">End date</dt><dd class="col-7">{{ task.end_date|date:"d M Y"|default:"-" }}</dd>
+      <dt class="col-5">Completed</dt><dd class="col-7">{{ task.completed_date|date:"d M Y"|default:"-" }}</dd>
+      <dt class="col-5">Hours logged</dt><dd class="col-7">{{ total_hours|floatformat:2 }}</dd>
+      <dt class="col-5">Technologies</dt><dd class="col-7">{% for t in task.technologies.all %}<span class="badge text-bg-light border">{{ t.name }}</span> {% empty %}-{% endfor %}</dd>
+      <dt class="col-5">Updated</dt><dd class="col-7 mb-0">{{ task.updated_at|date:"d M Y H:i" }}</dd>
+    </dl></div></div>
+
+    <div class="card mb-3"><div class="card-header bg-white fw-semibold">Status history</div>
+      <ul class="list-group list-group-flush small">
+      {% for h in status_history %}
+        <li class="list-group-item">{{ h.from_label }} to <strong>{{ h.to_label }}</strong>{% if h.remarks %}<div>{{ h.remarks }}</div>{% endif %}<span class="text-muted">{{ h.changed_by.display_name|default:"-" }}, {{ h.changed_at|date:"d M Y H:i" }}</span></li>
+      {% empty %}<li class="list-group-item text-muted">No changes recorded.</li>{% endfor %}
+      </ul></div>
+
+    {% if deadline_changes %}
+    <div class="card mb-3"><div class="card-header bg-white fw-semibold">Deadline changes</div>
+      <ul class="list-group list-group-flush small">
+      {% for d in deadline_changes %}
+        <li class="list-group-item">{{ d.old_date|date:"d M Y"|default:"none" }} to <strong>{{ d.new_date|date:"d M Y"|default:"none" }}</strong>{% if d.reason %}<div>{{ d.reason }}</div>{% endif %}<span class="text-muted">{{ d.changed_by.display_name|default:"-" }}, {{ d.changed_at|date:"d M Y H:i" }}</span></li>
+      {% endfor %}
+      </ul></div>
+    {% endif %}
+
+    <div class="card"><div class="card-header bg-white fw-semibold">Assignment history</div>
+      <ul class="list-group list-group-flush small">
+      {% for h in assignment_history %}
+        <li class="list-group-item">{% if h.from_employee %}{{ h.from_employee.display_name }} to {% endif %}<strong>{{ h.to_employee.display_name }}</strong><br><span class="text-muted">by {{ h.changed_by.display_name|default:"-" }}, {{ h.changed_at|date:"d M Y H:i" }}</span></li>
+      {% endfor %}
+      </ul></div>
+  </div>
+</div>
+{% endblock %}

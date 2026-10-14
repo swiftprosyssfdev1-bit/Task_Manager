@@ -1,0 +1,31 @@
+<div class="table-responsive">
+<table class="table table-hover align-middle mb-0">
+  <thead><tr>
+    <th>ID</th>{% if not compact %}<th>Date</th>{% endif %}{% if user.can_manage_tasks %}<th>Employee</th>{% endif %}
+    <th>Task</th><th>Project</th><th>Assigned</th><th>Est. date</th><th>Completed</th><th>Days taken</th><th>Status</th>
+    {% if not compact %}<th>Technologies</th>{% endif %}<th class="text-end">Hours</th>
+    {% if not compact %}<th>Remarks</th><th></th>{% endif %}
+  </tr></thead>
+  <tbody>
+  {% for t in tasks %}
+    <tr>
+      <td><a href="{% url 'task_detail' t.pk %}">{{ t.display_id }}</a></td>
+      {% if not compact %}<td>{{ t.last_work_date|date:"d M Y"|default:"-" }}</td>{% endif %}
+      {% if user.can_manage_tasks %}<td>{{ t.assigned_to.display_name }}</td>{% endif %}
+      <td class="task-title text-truncate">{{ t.title }}</td>
+      <td>{{ t.project.name|default:"-" }}{% if t.project.department %}<div class="text-muted small">{{ t.project.department.name }}</div>{% endif %}</td>
+      <td>{{ t.assign_date|date:"d M Y" }}</td>
+      <td>{{ t.est_date|date:"d M Y"|default:"-" }}{% if t.is_overdue %} <span class="badge text-bg-danger">Overdue</span>{% endif %}</td>
+      <td>{{ t.completed_date|date:"d M Y"|default:"-" }}</td>
+      <td><span class="day-pill{% if t.days_taken is not None %} done{% endif %}">{{ t.duration_label }}</span></td>
+      <td><span class="badge text-bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+      {% if not compact %}<td>{% for tech in t.technologies.all %}<span class="badge text-bg-light border">{{ tech.name }}</span> {% empty %}-{% endfor %}</td>{% endif %}
+      <td class="text-end">{{ t.logged_hours|floatformat:2 }}</td>
+      {% if not compact %}<td class="text-truncate" style="max-width:200px">{{ t.remarks|default:"-" }}</td>
+      <td class="text-end">{% if not user.is_admin_role %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'task_update' t.pk %}">Update</a>{% endif %}</td>{% endif %}
+    </tr>
+  {% empty %}
+    <tr><td colspan="14" class="text-center text-muted py-4">No tasks found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>

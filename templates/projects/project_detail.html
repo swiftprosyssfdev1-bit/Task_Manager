@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div><h1 class="h4 mb-1">{{ project.name }}</h1>
+    <div class="text-muted small">{% if project.department %}<span class="tech-chip">{{ project.department.name }}</span> {% endif %}{{ project.code }} &middot; Manager: {{ project.manager.display_name|default:"not set" }}{% if project.start_date %} &middot; Started {{ project.start_date|date:"d M Y" }}{% endif %}{% if project.est_date %} &middot; Est. {{ project.est_date|date:"d M Y" }}{% endif %}{% if project.end_date %} &middot; Ends {{ project.end_date|date:"d M Y" }}{% endif %}</div></div>
+  {% if user.can_assign_tasks and project.manager_id == user.pk or user.can_assign_tasks and user.department_id and project.department_id == user.department_id %}
+  <div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="{% url 'project_update' project.pk %}"><i class="bi bi-pencil me-1"></i>Edit project</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'task_create' %}?project={{ project.pk }}"><i class="bi bi-plus-lg me-1"></i>Assign daily task</a></div>
+  {% endif %}
+</div>
+{% if project.description %}<p class="mb-2">{{ project.description }}</p>{% endif %}
+<div class="mb-3"><span class="text-muted small me-1">Technologies:</span>{% for t in technologies %}<span class="tech-chip">{{ t.name }}</span>{% empty %}<span class="text-muted small">none set</span>{% endfor %}</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="mini-stat tone-primary"><div class="stat-icon"><i class="bi bi-people"></i></div><div><div class="stat-label">Team members</div><div class="stat-value">{{ members|length }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="mini-stat tone-success"><div class="stat-icon"><i class="bi bi-check2-circle"></i></div><div><div class="stat-label">Tasks done</div><div class="stat-value">{{ done_count }} / {{ task_count }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="mini-stat tone-warning"><div class="stat-icon"><i class="bi bi-calendar-range"></i></div><div><div class="stat-label">Project running</div><div class="stat-value">{% if days_running %}{{ days_running }} day{{ days_running|pluralize }}{% else %}-{% endif %}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="mini-stat tone-info"><div class="stat-icon"><i class="bi bi-stopwatch"></i></div><div><div class="stat-label">Avg days per task</div><div class="stat-value">{% if avg_days is not None %}{{ avg_days }}{% else %}-{% endif %}</div></div></div></div>
+</div>
+
+{% if user.can_manage_tasks %}
+<div class="card mb-3"><div class="card-header">Days taken by employee</div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Employee</th><th>Tasks</th><th>Completed</th><th>Open</th><th>Avg days / task</th><th>Longest</th><th class="text-end">Hours logged</th></tr></thead>
+    <tbody>
+    {% for r in team_stats %}
+      <tr><td>{{ r.name }}</td><td>{{ r.total }}</td><td>{{ r.done }}</td><td>{{ r.open }}</td>
+        <td>{% if r.avg_days is not None %}<span class="day-pill done">{{ r.avg_days }} d</span>{% else %}-{% endif %}</td>
+        <td>{% if r.max_days is not None %}{{ r.max_days }} d{% else %}-{% endif %}</td><td class="text-end">{{ r.hours|floatformat:2 }}</td></tr>
+    {% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No tasks assigned yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+  <div class="card-footer small text-muted bg-white">Days = completed date minus assign date. A task finished the same day counts as 0 days.</div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-9"><div class="card"><div class="card-header">Tasks</div>
+    {% include "tasks/_task_table.html" with compact=True %}</div></div>
+  <div class="col-lg-3"><div class="card"><div class="card-header">Team</div>
+    <ul class="list-group list-group-flush small">{% for m in members %}<li class="list-group-item d-flex align-items-center gap-2"><span class="avatar" style="width:26px;height:26px;font-size:.7rem">{{ m.display_name|slice:":1"|upper }}</span>{{ m.display_name }}</li>{% empty %}<li class="list-group-item text-muted">No members yet.</li>{% endfor %}</ul></div></div>
+</div>
+{% endblock %}

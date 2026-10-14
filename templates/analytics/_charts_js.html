@@ -1,0 +1,50 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var el = document.getElementById('chart-data');
+  if (!el || typeof Chart === 'undefined') return;
+  var c = JSON.parse(el.textContent);
+  var grid = {color: '#eef1f5'};
+  var ints = {beginAtZero: true, ticks: {precision: 0}};
+  var BLUE = '#28a8e0', ORANGE = '#f09000', GREEN = '#1fa971', RED = '#dc3545';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.font.family = '"Inter", system-ui, sans-serif';
+  Chart.defaults.color = '#667085';
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+  function draw(id, hasData, cfg) {
+    var cv = document.getElementById(id);
+    if (!cv) return null;
+    if (!hasData) {
+      cv.parentElement.innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted small">No data yet</div>';
+      return null;
+    }
+    cfg.options = Object.assign({responsive: true, maintainAspectRatio: false}, cfg.options || {});
+    return new Chart(cv, cfg);
+  }
+  function any(a) { return a && a.some(function (n) { return n > 0; }); }
+
+
+
+
+
+
+
+  if (c.projects) {
+    draw('chProjects', c.projects.labels.length > 0, {type: 'bar',
+      data: {labels: c.projects.labels, datasets: [
+        {label: 'Completed', data: c.projects.completed, backgroundColor: GREEN},
+        {label: 'Open', data: c.projects.open, backgroundColor: BLUE}]},
+      options: {indexAxis: 'y', plugins: {legend: {position: 'bottom'}},
+        scales: {x: Object.assign({stacked: true, grid: grid}, ints), y: {stacked: true, grid: {display: false}}}}});
+  }
+  if (c.workload) {
+    draw('chWorkload', c.workload.labels.length > 0, {type: 'bar',
+      data: {labels: c.workload.labels, datasets: [
+        {label: 'Open', data: c.workload.open, backgroundColor: BLUE},
+        {label: 'Overdue', data: c.workload.overdue, backgroundColor: RED}]},
+      options: {indexAxis: 'y', plugins: {legend: {position: 'bottom'}},
+        scales: {x: Object.assign({stacked: true, grid: grid}, ints), y: {stacked: true, grid: {display: false}}}}});
+  }
+})();
+</script>

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><h1 class="h4 mb-0">Notifications</h1>
+    <div class="text-muted small">{% if unread_notifications %}{{ unread_notifications }} unread{% else %}You are all caught up{% endif %}</div></div>
+  {% if unread_notifications %}
+  <form method="post" action="{% url 'notification_read_all' %}">{% csrf_token %}<button class="btn btn-outline-secondary btn-sm"><i class="bi bi-check2-all me-1"></i>Mark all as read</button></form>
+  {% endif %}
+</div>
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link py-1 {% if not only_unread %}active{% endif %}" href="{% url 'notification_list' %}">All</a></li>
+  <li class="nav-item"><a class="nav-link py-1 {% if only_unread %}active{% endif %}" href="?filter=unread">Unread</a></li>
+</ul>
+<div class="card"><div class="list-group list-group-flush">
+  {% for n in notifications %}
+  <a class="list-group-item list-group-item-action d-flex gap-3 align-items-start py-3" href="{% url 'notification_open' n.pk %}">
+    <span class="text-{{ n.color }} fs-5"><i class="bi {{ n.icon }}"></i></span>
+    <span class="flex-grow-1">
+      <span class="{% if not n.is_read %}fw-semibold{% endif %}">{{ n.message }}</span>
+      <span class="d-block text-muted small">{{ n.get_kind_display }} &middot; {{ n.created_at|timesince }} ago</span>
+    </span>
+    {% if not n.is_read %}<span class="badge rounded-pill text-bg-primary align-self-center">New</span>{% endif %}
+  </a>
+  {% empty %}
+  <div class="list-group-item text-center text-muted py-5">{% if only_unread %}No unread notifications.{% else %}Nothing yet. You will be told here when a task is assigned, submitted for review, changed or overdue.{% endif %}</div>
+  {% endfor %}
+</div></div>
+{% include "_pagination.html" %}
+{% endblock %}

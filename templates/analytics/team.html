@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Productivity analytics</h1>
+  <span class="text-muted small">{{ start|date:"d M Y" }} to {{ end|date:"d M Y" }}</span>
+</div>
+<form method="get" class="card card-body mb-3"><div class="row g-2 align-items-end">
+  {% for f in filter_form %}
+    <div class="col-6 col-md-3"><label class="form-label small mb-1" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}
+      {% for e in f.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+  {% endfor %}
+  <div class="col-auto d-flex gap-2"><button class="btn btn-secondary">Apply</button><a class="btn btn-outline-secondary" href="{% url 'team_analytics' %}">This month</a></div>
+</div></form>
+
+<div class="card mb-3">
+  <div class="card-header bg-white fw-semibold">Employees</div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr>
+      <th>Employee</th><th class="text-end">Assigned</th><th class="text-end">Completed</th><th class="text-end">Completion rate</th>
+      <th class="text-end">On time</th><th class="text-end">Avg days (calendar)</th><th class="text-end">Avg days (business)</th>
+      <th class="text-end">Avg hrs / task</th><th class="text-end">Hours logged</th>
+      <th class="text-end">Open now</th><th class="text-end">Overdue now</th><th class="text-end">Blocked now</th>
+    </tr></thead>
+    <tbody>
+    {% for r in employees %}
+      <tr>
+        <td><a href="{% url 'employee_report' r.user.pk %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}">{{ r.user.display_name }}</a>
+          {% if r.high_workload %}<span class="badge text-bg-warning" title="{{ r.open_now }} open tasks (threshold {{ workload_threshold }})">High workload</span>{% endif %}</td>
+        <td class="text-end">{{ r.assigned }}</td>
+        <td class="text-end">{{ r.completed }}</td>
+        <td class="text-end">{% if r.completion_rate is None %}-{% else %}{{ r.completion_rate }}%{% endif %}</td>
+        <td class="text-end">{% if r.on_time_pct is None %}-{% else %}{{ r.on_time_pct }}%{% endif %}
+          <div class="small-note">{{ r.on_time }} on time, {{ r.late }} late{% if r.no_estimate %}, {{ r.no_estimate }} no est.{% endif %}</div></td>
+        <td class="text-end">{{ r.avg_calendar|default_if_none:"-" }}</td>
+        <td class="text-end">{{ r.avg_business|default_if_none:"-" }}</td>
+        <td class="text-end">{{ r.avg_hours|default_if_none:"-" }}</td>
+        <td class="text-end">{{ r.logged_hours|floatformat:2 }}</td>
+        <td class="text-end">{{ r.open_now }}</td>
+        <td class="text-end">{% if r.overdue_now %}<span class="text-danger fw-semibold">{{ r.overdue_now }}</span>{% else %}0{% endif %}</td>
+        <td class="text-end">{% if r.blocked_now %}<span class="text-danger fw-semibold">{{ r.blocked_now }}</span>{% else %}0{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="12" class="text-center text-muted py-4">No task activity in this period.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="card-footer bg-white small-note">
+    Assigned, completed, on-time, average days and hours cover the selected period. Open, overdue and blocked are today's counts.
+    Completion rate = tasks assigned in the period that are now completed (cancelled excluded).
+    On time = completed on or before the est. date; tasks with no est. date are not counted as late or early.
+    Business days skip weekends and listed holidays. These figures do not account for task size or difficulty, so read them next to each employee's report rather than ranking people by them.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header bg-white fw-semibold">Projects <span class="small-note fw-normal">(all time, within your scope)</span></div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr>
+      <th>Project</th><th class="text-end">Tasks</th><th class="text-end">Completed</th><th class="text-end">Open</th>
+      <th class="text-end">Completion</th><th class="text-end">Overdue</th><th class="text-end">Blocked</th>
+      <th class="text-end">Avg est. days</th><th class="text-end">Avg actual days</th>
+    </tr></thead>
+    <tbody>
+    {% for p in projects %}
+      <tr>
+        <td>{% if p.id %}<a href="{% url 'project_detail' p.id %}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</td>
+        <td class="text-end">{{ p.total }}</td><td class="text-end">{{ p.completed }}</td><td class="text-end">{{ p.open }}</td>
+        <td class="text-end" style="min-width:140px">
+          {% if p.completion_pct is None %}-{% else %}
+          <div class="d-flex align-items-center gap-2 justify-content-end"><div class="progress flex-grow-1" style="height:6px"><div class="progress-bar bg-success" style="width:{{ p.completion_pct }}%"></div></div>{{ p.completion_pct }}%</div>{% endif %}</td>
+        <td class="text-end">{% if p.overdue %}<span class="text-danger fw-semibold">{{ p.overdue }}</span>{% else %}0{% endif %}</td>
+        <td class="text-end">{% if p.blocked %}<span class="text-danger fw-semibold">{{ p.blocked }}</span>{% else %}0{% endif %}</td>
+        <td class="text-end">{{ p.avg_estimated|default_if_none:"-" }}</td>
+        <td class="text-end">{{ p.avg_actual|default_if_none:"-" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="9" class="text-center text-muted py-4">No projects with tasks.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="card-footer bg-white small-note">Average est. and actual days compare only completed tasks that have an est. date, in calendar days.</div>
+</div>
+{% endblock %}

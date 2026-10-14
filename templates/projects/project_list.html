@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Projects{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Projects</h1>
+  <div class="d-flex gap-2 align-items-center">
+    {% if user.is_admin_role %}<form method="get"><select class="form-select form-select-sm" name="department" onchange="this.form.submit()">
+      <option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+    </select></form>{% endif %}
+    {% if user.can_assign_tasks %}<a class="btn btn-primary btn-sm" href="{% url 'project_create' %}">New project</a>{% endif %}
+  </div>
+</div>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Department</th><th>Project</th><th>Manager</th><th>Technologies</th><th>Tasks</th><th style="width:220px">Completion</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for p in projects %}
+    <tr>
+      <td>{{ p.department.name|default:"-" }}</td>
+      <td><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a> <span class="text-muted small">{{ p.code }}</span></td>
+      <td>{{ p.manager.display_name|default:"-" }}</td>
+      <td>{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}-{% endfor %}</td>
+      <td>{{ p.task_done }} / {{ p.task_total }}</td>
+      <td><div class="progress" style="height:8px"><div class="progress-bar" style="width:{% widthratio p.task_done p.task_total 100 %}%"></div></div></td>
+      <td>{% if p.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No projects yet.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% include "_pagination.html" %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Tasks</h1>
+  {% if user.can_assign_tasks %}<a class="btn btn-primary btn-sm" href="{% url 'task_create' %}">Assign a task</a>{% endif %}
+</div>
+<form method="get" class="card card-body mb-3"><div class="row g-2 align-items-end">
+  {% for f in filter_form %}
+    <div class="col-6 col-md-3 col-xl-2">
+      {% if f.widget_type == 'checkbox' %}<div class="form-check mt-4">{{ f }}<label class="form-check-label" for="{{ f.id_for_label }}">{{ f.label }}</label></div>
+      {% else %}<label class="form-label small mb-1" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}{% endif %}
+    </div>
+  {% endfor %}
+  <div class="col-auto d-flex gap-2"><button class="btn btn-secondary">Apply filters</button><a class="btn btn-outline-secondary" href="{% url 'task_list' %}">Clear</a></div>
+</div></form>
+<div class="card">{% include "tasks/_task_table.html" %}</div>
+{% include "_pagination.html" %}
+{% endblock %}

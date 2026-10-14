@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ role_label }}s{% endblock %}
+{% block content %}
+{% url 'manager_create' as manager_create_url %}{% url 'user_create' as employee_create_url %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><h1 class="h4 mb-0">{{ role_label }}s</h1>
+    <div class="text-muted small">{% if user.is_manager_role %}{% if user.department %}{{ user.department.name }} &middot; {% endif %}Employees assigned to you{% elif account_role == 'manager' %}Each manager runs one department: its employees, projects and reports.{% else %}Each employee reports to one manager of their department.{% endif %}</div></div>
+  {% if user.is_admin_role %}<a class="btn btn-primary btn-sm" href="{% if account_role == 'manager' %}{{ manager_create_url }}{% else %}{{ employee_create_url }}{% endif %}">Add {{ role_label|lower }}</a>{% endif %}
+</div>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-4"><input class="form-control" name="q" placeholder="Search name, username or email" value="{{ request.GET.q }}"></div>
+  {% if user.is_admin_role %}<div class="col-md-3"><select class="form-select" name="department"><option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>{% endif %}
+  <div class="col-auto"><button class="btn btn-secondary">Apply filters</button></div>
+</form>
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>Name</th><th>Username</th><th>Department</th>{% if account_role == 'employee' %}<th>Manager</th>{% endif %}<th>Code</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.display_name }}<div class="text-muted small">{{ u.email }}</div></td><td>{{ u.username }}</td>
+      <td>{{ u.department.name|default:"-" }}</td>
+      {% if account_role == 'employee' %}<td>{% if u.manager %}{{ u.manager.display_name }}{% else %}<span class="badge text-bg-warning">Not assigned</span>{% endif %}</td>{% endif %}
+      <td>{{ u.employee_code|default:"-" }}</td>
+      <td>{% if u.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Deactivated</span>{% endif %}</td>
+      <td class="text-end">
+        {% if account_role == 'employee' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'employee_report' u.pk %}">Report</a>{% endif %}
+        {% if user.is_admin_role %}
+          {% if account_role == 'manager' %}
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'user_create' %}?manager={{ u.pk }}">Add employee</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'manager_update' u.pk %}">Edit</a>
+            <form class="d-inline" method="post" action="{% url 'manager_toggle_active' u.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">{% if u.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+          {% else %}
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'user_update' u.pk %}">Edit</a>
+            <form class="d-inline" method="post" action="{% url 'user_toggle_active' u.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">{% if u.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">{% if user.is_manager_role %}No employees are assigned to you yet. Ask the admin to assign employees to you.{% else %}No {{ role_label|lower }}s yet.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table></div></div>
+{% include "_pagination.html" %}
+{% endblock %}

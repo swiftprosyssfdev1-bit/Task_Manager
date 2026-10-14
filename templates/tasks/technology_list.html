@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Technologies{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Technologies</h1><a class="btn btn-primary btn-sm" href="{% url 'technology_create' %}">Add technology</a>
+</div>
+<div class="card"><table class="table align-middle mb-0">
+  <thead><tr><th>Name</th><th>Tasks using it</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for t in technologies %}
+    <tr><td>{{ t.name }}</td><td>{{ t.task_count }}</td>
+      <td>{% if t.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'technology_update' t.pk %}">Edit</a></td></tr>
+  {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No technologies yet. Add the ones your team uses so employees can pick them.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

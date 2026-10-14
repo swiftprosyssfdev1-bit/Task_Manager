@@ -1,0 +1,4 @@
+Django>=5.2,<5.3
+mysqlclient>=2.2
+python-dotenv>=1.0
+# Windows fallback if mysqlclient will not build: pip install PyMySQL
