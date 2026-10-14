@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
+from tasks.attachments import AttachmentBase
+
 
 class ProjectQuerySet(models.QuerySet):
     def visible_to(self, user):
@@ -77,3 +79,7 @@ class ProjectMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} in {self.project}"
+
+
+class ProjectAttachment(AttachmentBase):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="attachments")

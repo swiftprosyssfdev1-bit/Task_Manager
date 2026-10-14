@@ -10,7 +10,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="{% static 'css/app.css' %}?v=5" rel="stylesheet">
+  <link href="{% static 'css/app.css' %}?v=9" rel="stylesheet">
+<script>
+function toggleNav(name, btn) {
+  var grp = document.querySelector('[data-nav-group="' + name + '"]');
+  if (!grp) return false;
+  var closing = grp.style.display !== 'none';
+  grp.style.display = closing ? 'none' : '';
+  btn.setAttribute('aria-expanded', closing ? 'false' : 'true');
+  btn.classList.toggle('is-collapsed', closing);
+  try {
+    var list = JSON.parse(localStorage.getItem('sidebarCollapsed') || '[]').filter(function (n) { return n !== name; });
+    if (closing) list.push(name);
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(list));
+  } catch (e) {}
+  return false;
+}
+</script>
 </head>
 <body>
 <div class="brand-strip"></div>
@@ -23,27 +39,41 @@
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar"></button>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-section">Workspace</div>
+      <button type="button" class="nav-section nav-toggle" data-nav-toggle="workspace" aria-expanded="true" onclick="return toggleNav('workspace', this)">Workspace<i class="bi bi-chevron-down"></i></button>
+      <div class="nav-group" data-nav-group="workspace">
       <a class="side-link {% if p == '/' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-grid-1x2"></i>Dashboard</a>
       <a class="side-link {% if '/projects/' in p and '/departments/' not in p %}active{% endif %}" href="{% url 'project_list' %}"><i class="bi bi-folder2-open"></i>Projects</a>
       <a class="side-link {% if '/tasks/' in p and '/technologies/' not in p %}active{% endif %}" href="{% url 'task_list' %}"><i class="bi bi-check2-square"></i>{% if user.can_manage_tasks %}Tasks{% else %}My tasks{% endif %}</a>
       {% if not user.is_admin_role %}<a class="side-link {% if '/notifications/' in p %}active{% endif %}" href="{% url 'notification_list' %}"><i class="bi bi-bell"></i>Notifications{% if unread_notifications %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ unread_notifications }}</span>{% endif %}</a>{% endif %}
+      </div>
 
-      <div class="nav-section">Insights</div>
+      <button type="button" class="nav-section nav-toggle" data-nav-toggle="insights" aria-expanded="true" onclick="return toggleNav('insights', this)">Insights<i class="bi bi-chevron-down"></i></button>
+      <div class="nav-group" data-nav-group="insights">
       {% if user.can_manage_tasks %}
       <a class="side-link {% if p == '/analytics/' %}active{% endif %}" href="{% url 'team_analytics' %}"><i class="bi bi-bar-chart-line"></i>Analytics</a>
       {% else %}
       <a class="side-link {% if '/analytics/' in p %}active{% endif %}" href="{% url 'employee_report' user.pk %}"><i class="bi bi-person-lines-fill"></i>My report</a>
       {% endif %}
+      </div>
 
       {% if user.can_manage_tasks %}
-      <div class="nav-section">Manage</div>
+      <button type="button" class="nav-section nav-toggle" data-nav-toggle="manage" aria-expanded="true" onclick="return toggleNav('manage', this)">Manage<i class="bi bi-chevron-down"></i></button>
+      <div class="nav-group" data-nav-group="manage">
       {% if user.is_admin_role %}<a class="side-link {% if '/managers/' in p %}active{% endif %}" href="{% url 'manager_list' %}"><i class="bi bi-person-badge"></i>Managers</a>{% endif %}
       <a class="side-link {% if '/employees/' in p %}active{% endif %}" href="{% url 'user_list' %}"><i class="bi bi-people"></i>Employees</a>
       {% if user.is_admin_role %}<a class="side-link {% if '/departments/' in p %}active{% endif %}" href="{% url 'department_list' %}"><i class="bi bi-diagram-3"></i>Departments</a>{% endif %}
       {% if user.is_manager_role %}<a class="side-link {% if '/technologies/' in p %}active{% endif %}" href="{% url 'technology_list' %}"><i class="bi bi-cpu"></i>Technologies</a>{% endif %}
+      </div>
       {% endif %}
     </nav>
+    <script>
+    (function () {
+      try { JSON.parse(localStorage.getItem('sidebarCollapsed') || '[]').forEach(function (n) {
+        var g = document.querySelector('[data-nav-group="' + n + '"]'), b = document.querySelector('[data-nav-toggle="' + n + '"]');
+        if (g && b) { g.style.display = 'none'; b.setAttribute('aria-expanded', 'false'); b.classList.add('is-collapsed'); }
+      }); } catch (e) {}
+    })();
+    </script>
     <div class="sidebar-foot">
       <div class="user-chip">
         <div class="avatar">{{ user.display_name|slice:":1"|upper }}</div>
@@ -82,6 +112,8 @@ document.addEventListener('submit', function (e) {
   else if (e.target.dataset.sent) { e.preventDefault(); }
 });
 </script>
+
+<script src="{% static 'js/attachments.js' %}?v=1"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

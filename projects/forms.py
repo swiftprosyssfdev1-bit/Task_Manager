@@ -5,9 +5,10 @@ from django.db.models import Q
 from accounts.forms import BootstrapMixin
 from accounts.models import User
 
+from tasks.attachments import AttachmentFormMixin
 from tasks.models import Technology
 
-from .models import Department, Project, ProjectMembership
+from .models import Department, Project, ProjectAttachment, ProjectMembership
 
 
 class DepartmentForm(BootstrapMixin, forms.ModelForm):
@@ -16,7 +17,9 @@ class DepartmentForm(BootstrapMixin, forms.ModelForm):
         fields = ["name", "description", "is_active"]
 
 
-class ProjectForm(BootstrapMixin, forms.ModelForm):
+class ProjectForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
+    attachment_model = ProjectAttachment
+    attachment_fk = "project"
     team_members = forms.ModelMultipleChoiceField(
         queryset=User.objects.none(),
         required=False, label="Team members", widget=forms.CheckboxSelectMultiple,
@@ -36,6 +39,7 @@ class ProjectForm(BootstrapMixin, forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self._add_attachment_field()
         if user is not None:
             # A manager's projects always belong to the manager's own department and use its employees only.
             del self.fields["department"]
@@ -79,4 +83,5 @@ class ProjectForm(BootstrapMixin, forms.ModelForm):
             project.memberships.filter(user_id__in=existing - wanted).delete()
             ProjectMembership.objects.bulk_create(
                 [ProjectMembership(project=project, user_id=pk) for pk in wanted - existing])
+            self.save_attachments_to([project], self.user)
         return project

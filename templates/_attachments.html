@@ -1,0 +1,16 @@
+{# List of documents. Needs: attachments, kind ('project'|'task'|'comment'). Optional: can_delete. #}
+{% for a in attachments %}
+<div class="doc-row">
+  <i class="bi {{ a.icon }} doc-icon"></i>
+  <div class="doc-name">
+    <a href="{% url 'attachment_download' kind a.pk %}">{% if a.folder %}<span class="text-muted">{{ a.folder }}/</span>{% endif %}{{ a.basename }}</a>
+    <div class="doc-meta">{{ a.size_label }}{% if a.uploaded_by %} &middot; {{ a.uploaded_by.display_name }}{% endif %} &middot; {{ a.uploaded_at|date:"d M Y H:i" }}</div>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'attachment_download' kind a.pk %}" title="Download"><i class="bi bi-download"></i></a>
+  {% if can_delete or a.uploaded_by_id == user.pk %}
+  <form method="post" action="{% url 'attachment_delete' kind a.pk %}" onsubmit="return confirm('Remove this document?');">{% csrf_token %}<button class="btn btn-outline-danger btn-sm" title="Remove"><i class="bi bi-trash"></i></button></form>
+  {% endif %}
+</div>
+{% empty %}
+<div class="doc-row text-muted">No documents attached.</div>
+{% endfor %}

@@ -84,7 +84,8 @@ def deadline_changed(task, old_date, new_date, actor):
 
 
 def comment_added(task, comment):
-    snippet = comment.body if len(comment.body) <= 80 else comment.body[:77] + "..."
+    body = comment.body.strip() or "(attached documents)"
+    snippet = body if len(body) <= 80 else body[:77] + "..."
     who = _name(comment.author)
     for person in _unique([task.assigned_to] + task_managers(task)):
         notify(person, Kind.COMMENT, f"{who} commented on {_label(task)}: {snippet}", task, comment.author)

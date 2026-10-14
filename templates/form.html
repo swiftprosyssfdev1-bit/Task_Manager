@@ -8,9 +8,11 @@
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <div class="row g-3">
     {% for f in form %}
-      <div class="{% if f.widget_type == 'textarea' or f.widget_type == 'checkboxselectmultiple' %}col-12{% else %}col-md-6{% endif %}">
+      <div class="{% if f.widget_type == 'textarea' or f.widget_type == 'checkboxselectmultiple' or f.name == 'attachments' %}col-12{% else %}col-md-6{% endif %}">
         {% if f.widget_type == 'checkbox' %}
           <div class="form-check">{{ f }}<label class="form-check-label" for="{{ f.id_for_label }}">{{ f.label }}</label></div>
+        {% elif f.name == 'attachments' %}
+          <label class="form-label">{{ f.label }}</label>{% include "_attach_picker.html" with field=f %}
         {% else %}
           <label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{% if f.widget_type == 'checkboxselectmultiple' %}<div class="check-grid" data-field="{{ f.html_name }}">{{ f }}</div>{% else %}{{ f }}{% endif %}
         {% endif %}

@@ -1,0 +1,23 @@
+{# Attached documents picker. Needs: field (the 'attachments' form field). The + opens a menu: Files or Folder. #}
+<div class="attach-box" data-attach>
+  <div class="attach-bar">
+    <div class="dropdown">
+      <button type="button" class="attach-plus" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Add documents" title="Add documents"><i class="bi bi-plus-lg"></i></button>
+      <ul class="dropdown-menu">
+        <li><button type="button" class="dropdown-item" data-pick="files"><i class="bi bi-file-earmark-arrow-up me-2"></i>Files (Excel, PDF, image, ZIP)</button></li>
+        <li><button type="button" class="dropdown-item" data-pick="folder"><i class="bi bi-folder2-open me-2"></i>Folder</button></li>
+      </ul>
+    </div>
+    <span class="attach-hint">Click + to attach Excel, PDF, image, ZIP files or a whole folder</span>
+  </div>
+  <div data-attach-msg hidden></div>
+  <ul class="attach-list" data-attach-list hidden></ul>
+  {{ field }}
+  <input type="file" data-files multiple hidden accept="{{ field.field.widget.attrs.accept }}">
+  <input type="file" data-folder webkitdirectory multiple hidden>
+</div>
+{% if existing_attachments %}
+<div class="small text-muted mt-2">Already attached ({{ existing_attachments|length }}):
+  {% for a in existing_attachments %}<span class="tech-chip"><i class="bi {{ a.icon }} me-1"></i>{{ a.name }}</span>{% endfor %}
+  <span class="d-block">Remove documents from the page of the {{ existing_kind }}.</span></div>
+{% endif %}

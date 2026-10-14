@@ -12,7 +12,9 @@ from accounts.forms import BootstrapMixin
 from accounts.models import User
 from projects.models import Project
 
-from .models import Task, TaskComment, TaskWorkLog, Technology, sum_hours
+from .attachments import AttachmentFormMixin
+from .models import (Task, TaskAttachment, TaskComment, TaskCommentAttachment, TaskWorkLog, Technology,
+                     sum_hours)
 
 
 def _date_widget():
@@ -26,10 +28,15 @@ def _time_widget():
 NOTE_LABEL = "Note for history (optional)"
 
 
-class TaskForm(BootstrapMixin, forms.ModelForm):
+class TaskForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
     """Manager / admin form: full control over assignment and deadlines."""
     change_note = forms.CharField(required=False, label=NOTE_LABEL, max_length=500,
                                   help_text="Saved with any status or deadline change, e.g. the reason for a new date.")
+
+    attachment_model = TaskAttachment
+    attachment_fk = "task"
+    field_order = ["title", "description", "project", "assigned_to", "priority", "status",
+                   "assign_date", "est_date", "end_date", "remarks", "attachments", "change_note"]
 
     class Meta:
         model = Task
@@ -40,6 +47,7 @@ class TaskForm(BootstrapMixin, forms.ModelForm):
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
+        self._add_attachment_field()
         self.fields["project"].queryset = Project.objects.visible_to(user).filter(is_active=True)
         if "assigned_to" in self.fields:
             self.fields["assigned_to"].queryset = user.employees_in_scope().filter(
@@ -64,7 +72,7 @@ class TaskCreateForm(TaskForm):
                   "remarks"]
 
     field_order = ["project", "assignees", "title", "description", "priority", "status",
-                   "assign_date", "est_date", "end_date", "remarks", "change_note"]
+                   "assign_date", "est_date", "end_date", "remarks", "attachments", "change_note"]
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, user=user, **kwargs)
@@ -207,12 +215,27 @@ class WorkLogCorrectionForm(WorkLogForm):
     reason = forms.CharField(label="Reason for correction", max_length=500)
 
 
-class CommentForm(BootstrapMixin, forms.ModelForm):
+class CommentForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
+    attachment_model = TaskCommentAttachment
+    attachment_fk = "comment"
+
     class Meta:
         model = TaskComment
         fields = ["body"]
         labels = {"body": "Add a comment"}
         widgets = {"body": forms.Textarea(attrs={"rows": 2})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["body"].required = False  # a comment may be just documents
+        self._add_attachment_field()
+        self.fields["attachments"].label = "Attach documents"
+
+    def clean(self):
+        d = super().clean()
+        if not (d.get("body") or "").strip() and not d.get("attachments") and not self.errors:
+            self.add_error("body", "Write a comment or attach a document before posting.")
+        return d
 
 
 class ReviewForm(BootstrapMixin, forms.Form):

@@ -8,6 +8,8 @@ from django.db.models import F, Max, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from .attachments import AttachmentBase
+
 
 def sum_hours(path="duration_hours"):
     return Coalesce(Sum(path), Value(Decimal("0.00")),
@@ -277,3 +279,11 @@ class TaskWorkLogAudit(models.Model):
 
     class Meta:
         ordering = ["-changed_at", "-id"]
+
+
+class TaskAttachment(AttachmentBase):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
+
+
+class TaskCommentAttachment(AttachmentBase):
+    comment = models.ForeignKey(TaskComment, on_delete=models.CASCADE, related_name="attachments")

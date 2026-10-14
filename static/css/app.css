@@ -151,3 +151,46 @@ a:not(.btn):not(.side-link):not(.page-link):not(.nav-link):not(.list-group-item)
 
 /* Inputs are fixed: no drag-to-resize handle on text areas. */
 textarea, textarea.form-control { resize: none !important; }
+
+/* ---- attached documents */
+.attach-box { border: 1px dashed #c9d6e2; border-radius: .6rem; padding: .6rem .75rem; background: #fbfdff; }
+.attach-box .attach-bar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.attach-plus { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--brand-blue-dark); background: #fff;
+  color: var(--brand-blue-dark); display: inline-grid; place-items: center; font-size: 1.15rem; line-height: 1; padding: 0; transition: background .15s, color .15s; }
+.attach-plus:hover, .attach-plus:focus-visible, .attach-plus.show { background: var(--brand-blue-dark); color: #fff; }
+.attach-hint { color: var(--muted); font-size: .82rem; }
+.attach-list { list-style: none; margin: .6rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
+.attach-list[hidden], [data-attach-msg][hidden] { display: none; }
+.attach-chip { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; background: #eef6fb; border: 1px solid #d5e8f3;
+  border-radius: 99px; padding: .15rem .35rem .15rem .65rem; font-size: .82rem; color: #0e6a96; }
+.attach-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; font-weight: 500; }
+.attach-chip-sub { color: var(--muted); font-size: .74rem; white-space: nowrap; }
+.attach-chip-x { border: 0; background: transparent; color: #667085; width: 20px; height: 20px; border-radius: 50%; line-height: 1; padding: 0; font-size: 1rem; }
+.attach-chip-x:hover { background: #d9534f; color: #fff; }
+[data-attach-msg] { margin-top: .5rem; font-size: .8rem; color: #b42318; }
+
+/* comment composer: textarea with the + button underneath, inside one box */
+.composer { border: 1px solid #cfd8e3; border-radius: .7rem; background: #fff; padding: .5rem .6rem; }
+.composer:focus-within { border-color: var(--brand-blue-dark); box-shadow: 0 0 0 .2rem rgba(18, 135, 189, .15); }
+.composer textarea.form-control { border: 0; box-shadow: none; padding: .25rem .25rem; background: transparent; }
+.composer .attach-box { border: 0; background: transparent; padding: 0; }
+.composer .composer-bar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .25rem; }
+
+/* document lists on project / task pages */
+.doc-row { display: flex; align-items: center; gap: .6rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); font-size: .88rem; }
+.doc-row:last-child { border-bottom: 0; }
+.doc-row .doc-icon { font-size: 1.25rem; color: var(--brand-blue-dark); flex: none; }
+.doc-row .doc-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.doc-row .doc-meta { color: var(--muted); font-size: .76rem; }
+.doc-row form { margin: 0; }
+.comment-docs { margin-top: .45rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+.comment-docs a { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; text-decoration: none; border: 1px solid #d5e8f3;
+  background: #eef6fb; color: #0e6a96; border-radius: 99px; padding: .1rem .6rem; }
+.comment-docs a:hover { background: #dcedf7; }
+
+/* collapsible sidebar sections */
+.nav-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: transparent; border: 0; cursor: pointer; text-align: left; }
+.nav-toggle:hover { color: var(--brand-blue-dark); }
+.nav-toggle i { font-size: .75rem; transition: transform .15s; }
+.nav-toggle.is-collapsed i { transform: rotate(-90deg); }
+.nav-group.nav-group-closed { display: none !important; }

@@ -34,6 +34,10 @@
 </div>
 {% endif %}
 
+<div class="card mb-3"><div class="card-header d-flex justify-content-between"><span>Attached documents</span><span class="text-muted small fw-normal">{{ attachments|length }} file{{ attachments|length|pluralize }}</span></div>
+  {% include "_attachments.html" with attachments=attachments kind="project" can_delete=can_manage_attachments %}
+</div>
+
 <div class="row g-3">
   <div class="col-lg-9"><div class="card"><div class="card-header">Tasks</div>
     {% include "tasks/_task_table.html" with compact=True %}</div></div>

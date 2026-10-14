@@ -54,6 +54,9 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
               .select_related("assigned_to").prefetch_related("technologies").with_hours())
         ctx["tasks"] = qs.order_by("-created_at")[:50]
         ctx["technologies"] = self.object.technologies.all()
+        ctx["attachments"] = self.object.attachments.select_related("uploaded_by")
+        ctx["can_manage_attachments"] = self.request.user.can_assign_tasks and Project.objects.managed_by(
+            self.request.user).filter(pk=self.object.pk).exists()
         ctx.update(self.duration_stats(list(qs)))
         return ctx
 
@@ -131,6 +134,12 @@ class ProjectUpdateView(RoleRequiredMixin, TitleMixin, SuccessMessageMixin, Upda
         return kwargs
 
     success_message = "Project updated."
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["existing_attachments"] = list(self.object.attachments.all())
+        ctx["existing_kind"] = "project"
+        return ctx
 
     def get_success_url(self):
         return reverse("project_detail", args=[self.object.pk])

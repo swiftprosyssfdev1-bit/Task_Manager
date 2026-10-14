@@ -115,3 +115,14 @@ MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "media/"
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "5"))
 ALLOWED_UPLOAD_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "txt", "csv", "xlsx", "docx", "zip"]
+
+# Attached documents (projects, tasks, comments). Excel, PDF, images and ZIP files; a folder is uploaded as its files.
+ATTACHMENT_EXTENSIONS = {
+    "Excel": ["xls", "xlsx", "xlsm", "xlsb", "csv"],
+    "PDF": ["pdf"],
+    "Image": ["png", "jpg", "jpeg", "gif", "webp", "bmp"],
+    "ZIP": ["zip"],
+}
+ATTACHMENT_MAX_MB = int(os.environ.get("ATTACHMENT_MAX_MB", "25"))      # per file
+ATTACHMENT_MAX_FILES = int(os.environ.get("ATTACHMENT_MAX_FILES", "50"))  # per save / per comment
+DATA_UPLOAD_MAX_NUMBER_FILES = ATTACHMENT_MAX_FILES + 50  # Django rejects a request with more files than this

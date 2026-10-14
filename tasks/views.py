@@ -20,7 +20,9 @@ from .forms import (CommentForm, ReviewForm, TaskCreateForm, TaskEmployeeForm, T
                     WorkLogCorrectionForm, WorkLogForm)
 from projects.models import Project
 
-from .models import Task, TaskComment, TaskWorkLog, TaskWorkLogAudit, Technology
+from .models import (Task, TaskAttachment, TaskComment, TaskCommentAttachment, TaskWorkLog, TaskWorkLogAudit,
+                     Technology)
+from projects.models import ProjectAttachment
 
 
 # ---------------------------------------------------------------- tasks
@@ -81,7 +83,9 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
             deadline_changes=task.deadline_changes.select_related("changed_by"),
             worklogs=task.work_logs.select_related("employee").prefetch_related("technologies"),
             worklog_audits=TaskWorkLogAudit.objects.filter(worklog__task=task).select_related("changed_by", "worklog"),
-            comments=task.comments.select_related("author"),
+            comments=task.comments.select_related("author").prefetch_related("attachments"),
+            attachments=task.attachments.select_related("uploaded_by"),
+            can_manage_attachments=user.can_assign_tasks,
             total_hours=task.total_hours,
             can_log_work=task.can_log_work(user),
             comment_form=CommentForm(),
@@ -128,6 +132,7 @@ class TaskCreateView(RoleRequiredMixin, TitleMixin, CreateView):
                 end_date=form.cleaned_data["end_date"], remarks=form.cleaned_data["remarks"])
             services.record_task_created(task, self.request.user, form.cleaned_data.get("change_note", ""))
             created.append(task)
+        form.save_attachments_to(created, self.request.user)  # every assignee's task gets its own copy
         self.created = created
         names = ", ".join(t.assigned_to.display_name for t in created)
         messages.success(self.request, f"{len(created)} task(s) assigned: {names}.")
@@ -156,10 +161,19 @@ class TaskUpdateView(LoginRequiredMixin, TitleMixin, UpdateView):
             kwargs["user"] = self.request.user
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        if self.request.user.can_assign_tasks:
+            ctx["existing_attachments"] = list(self.object.attachments.all())
+            ctx["existing_kind"] = "task"
+        return ctx
+
     @transaction.atomic
     def form_valid(self, form):
         response = super().form_valid(form)
         services.record_form_changes(self.object, form, self.request.user)
+        if hasattr(form, "save_attachments_to"):
+            form.save_attachments_to([self.object], self.request.user)
         messages.success(self.request, "Task updated.")
         return response
 
@@ -181,13 +195,16 @@ class TaskArchiveView(RoleRequiredMixin, View):
 class TaskCommentView(LoginRequiredMixin, View):
     def post(self, request, pk):
         task = get_object_or_404(Task.objects.visible_to(request.user), pk=pk)
-        form = CommentForm(request.POST)
+        form = CommentForm(request.POST, request.FILES)
         if form.is_valid():
-            comment = TaskComment.objects.create(task=task, author=request.user, body=form.cleaned_data["body"])
+            with transaction.atomic():
+                comment = TaskComment.objects.create(task=task, author=request.user,
+                                                     body=(form.cleaned_data["body"] or "").strip())
+                form.save_attachments_to([comment], request.user)
             notifications.comment_added(task, comment)
             messages.success(request, "Comment added.")
         else:
-            messages.error(request, "Write a comment before posting.")
+            messages.error(request, " ".join(e for errs in form.errors.values() for e in errs))
         return redirect("task_detail", pk=task.pk)
 
 
@@ -294,6 +311,58 @@ class WorkLogAttachmentView(LoginRequiredMixin, View):
             raise Http404
         return FileResponse(log.attachment.open("rb"), as_attachment=True,
                             filename=os.path.basename(log.attachment.name))
+
+
+# ---------------------------------------------------------------- attached documents
+def _attachment_queryset(user, kind):
+    """Documents the user may open: access follows the project / task they belong to."""
+    if kind == "project":
+        return ProjectAttachment.objects.filter(project__in=Project.objects.visible_to(user))
+    if kind == "task":
+        return TaskAttachment.objects.filter(task__in=Task.objects.visible_to(user))
+    if kind == "comment":
+        return TaskCommentAttachment.objects.filter(comment__task__in=Task.objects.visible_to(user))
+    raise Http404
+
+
+def _can_delete_attachment(user, kind, att):
+    if att.uploaded_by_id == user.pk:
+        return True
+    if not user.can_assign_tasks:
+        return False
+    if kind == "project":
+        return Project.objects.managed_by(user).filter(pk=att.project_id).exists()
+    return kind == "task"  # a manager who can see the task may tidy its documents; comments stay with their author
+
+
+class AttachmentDownloadView(LoginRequiredMixin, View):
+    """Documents are never served from a public URL; access follows task / project visibility."""
+
+    def get(self, request, kind, pk):
+        att = get_object_or_404(_attachment_queryset(request.user, kind), pk=pk)
+        try:
+            handle = att.file.open("rb")
+        except FileNotFoundError:
+            raise Http404("The stored file is missing.")
+        return FileResponse(handle, as_attachment=True, filename=att.basename)
+
+
+class AttachmentDeleteView(LoginRequiredMixin, View):
+    def post(self, request, kind, pk):
+        att = get_object_or_404(_attachment_queryset(request.user, kind), pk=pk)
+        if not _can_delete_attachment(request.user, kind, att):
+            raise PermissionDenied
+        if kind == "project":
+            back = redirect("project_detail", pk=att.project_id)
+        elif kind == "task":
+            back = redirect("task_detail", pk=att.task_id)
+        else:
+            back = redirect("task_detail", pk=att.comment.task_id)
+        name = att.name
+        att.file.delete(save=False)
+        att.delete()
+        messages.success(request, f"Removed {name}.")
+        return back
 
 
 # ---------------------------------------------------------------- technologies (manager only)
