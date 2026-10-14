@@ -194,3 +194,21 @@ textarea, textarea.form-control { resize: none !important; }
 .nav-toggle i { font-size: .75rem; transition: transform .15s; }
 .nav-toggle.is-collapsed i { transform: rotate(-90deg); }
 .nav-group.nav-group-closed { display: none !important; }
+
+/* Priority dropdown: a clean list with a coloured dot per priority (built by js/priority.js).
+   Low green, Medium yellow, High orange, Critical red. */
+.prio-dd { position: relative; }
+.prio-btn { display: flex; align-items: center; gap: .6rem; width: 100%; text-align: left; cursor: pointer; }
+.prio-menu { position: absolute; z-index: 1055; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: .3rem;
+  list-style: none; background: #fff; border: 1px solid #d5dde7; border-radius: .6rem;
+  box-shadow: 0 10px 26px rgba(15, 40, 70, .16); }
+.prio-item { display: flex; align-items: center; gap: .6rem; padding: .48rem .65rem; border-radius: .4rem; cursor: pointer;
+  color: #212529; }
+.prio-item.is-active { background: #f0f5fa; }
+.prio-item[aria-selected="true"] { font-weight: 600; }
+.prio-dot { flex: none; width: .72rem; height: .72rem; border-radius: 50%; background: #fff; border: 2px solid #b6c2cf; }
+.prio-dot[data-value="low"] { background: #2fa866; border-color: #2fa866; }
+.prio-dot[data-value="medium"] { background: #f4b400; border-color: #f4b400; }
+.prio-dot[data-value="high"] { background: #f08a00; border-color: #f08a00; }
+.prio-dot[data-value="critical"] { background: #dc3545; border-color: #dc3545; }
+.text-bg-orange { background-color: #f08a00 !important; color: #fff !important; }

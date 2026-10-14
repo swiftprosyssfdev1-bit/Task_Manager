@@ -73,8 +73,8 @@ class Task(models.Model):
         Status.BLOCKED: "danger", Status.PENDING_REVIEW: "info", Status.COMPLETED: "success",
         Status.CANCELLED: "dark",
     }
-    PRIORITY_COLORS = {Priority.LOW: "secondary", Priority.MEDIUM: "primary",
-                       Priority.HIGH: "warning", Priority.CRITICAL: "danger"}
+    PRIORITY_COLORS = {Priority.LOW: "success", Priority.MEDIUM: "warning",
+                       Priority.HIGH: "orange", Priority.CRITICAL: "danger"}
 
     title = models.CharField(max_length=200)
     description = models.TextField()

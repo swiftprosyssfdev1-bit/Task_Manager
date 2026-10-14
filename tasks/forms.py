@@ -28,6 +28,11 @@ def _time_widget():
 NOTE_LABEL = "Note for history (optional)"
 
 
+def colour_priority(field):
+    """Marks the priority dropdown so CSS/JS colour it: Low green, Medium yellow, High orange, Critical red."""
+    field.widget.attrs["class"] = f"{field.widget.attrs.get('class', '')} priority-select".strip()
+
+
 class TaskForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
     """Manager / admin form: full control over assignment and deadlines."""
     change_note = forms.CharField(required=False, label=NOTE_LABEL, max_length=500,
@@ -47,6 +52,7 @@ class TaskForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
+        colour_priority(self.fields["priority"])
         self._add_attachment_field()
         self.fields["project"].queryset = Project.objects.visible_to(user).filter(is_active=True)
         if "assigned_to" in self.fields:
@@ -141,6 +147,8 @@ class TaskFilterForm(BootstrapMixin, forms.Form):
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
+        colour_priority(self.fields["priority"])
+        colour_priority(self.fields["priority"])
         self.fields["project"].queryset = Project.objects.visible_to(user)
         if user.can_manage_tasks:
             self.fields["employee"].queryset = user.employees_in_scope().order_by("first_name", "username")
