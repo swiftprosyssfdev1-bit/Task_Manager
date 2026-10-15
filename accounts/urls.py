@@ -4,6 +4,12 @@ from . import views
 
 urlpatterns = [
     path("", views.DashboardView.as_view(), name="dashboard"),
+    # Admin: other app admins (no Django administration access)
+    path("admins/", views.UserListView.as_view(), {"role": "admin"}, name="admin_list"),
+    path("admins/new/", views.UserCreateView.as_view(), {"role": "admin"}, name="admin_create"),
+    path("admins/<int:pk>/edit/", views.UserUpdateView.as_view(), {"role": "admin"}, name="admin_update"),
+    path("admins/<int:pk>/toggle-active/", views.UserToggleActiveView.as_view(), {"role": "admin"},
+         name="admin_toggle_active"),
     # Admin: managers
     path("managers/", views.UserListView.as_view(), {"role": "manager"}, name="manager_list"),
     path("managers/new/", views.UserCreateView.as_view(), {"role": "manager"}, name="manager_create"),

@@ -60,6 +60,7 @@ function toggleNav(name, btn) {
       {% if user.can_manage_tasks %}
       <button type="button" class="nav-section nav-toggle" data-nav-toggle="manage" aria-expanded="true" onclick="return toggleNav('manage', this)">Manage<i class="bi bi-chevron-down"></i></button>
       <div class="nav-group" data-nav-group="manage">
+      {% if user.is_admin_role %}<a class="side-link {% if '/admins/' in p %}active{% endif %}" href="{% url 'admin_list' %}"><i class="bi bi-shield-lock"></i>Admins</a>{% endif %}
       {% if user.is_admin_role %}<a class="side-link {% if '/managers/' in p %}active{% endif %}" href="{% url 'manager_list' %}"><i class="bi bi-person-badge"></i>Managers</a>{% endif %}
       <a class="side-link {% if '/employees/' in p %}active{% endif %}" href="{% url 'user_list' %}"><i class="bi bi-people"></i>Employees</a>
       {% if user.is_admin_role %}<a class="side-link {% if '/departments/' in p %}active{% endif %}" href="{% url 'department_list' %}"><i class="bi bi-diagram-3"></i>Departments</a>{% endif %}

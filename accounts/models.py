@@ -20,6 +20,9 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         if self.is_superuser:
             self.role = self.Role.ADMIN
+        elif self.role == self.Role.ADMIN:
+            # An app admin works only inside this app: never staff, so no Django administration access.
+            self.is_staff = False
         self.employee_code = self.employee_code or None
         super().save(*args, **kwargs)
 

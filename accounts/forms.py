@@ -55,6 +55,10 @@ class AssignmentMixin:
 
     def setup_assignment(self, role, current_department=None, current_manager=None):
         self.role = role
+        if role == User.Role.ADMIN:
+            # App admins span every department, so they have no department or manager of their own.
+            del self.fields["department"], self.fields["manager"]
+            return
         dept = self.fields["department"]
         dept.queryset = _active_departments(current_department)
         dept.empty_label = "Select department"
@@ -105,6 +109,9 @@ class UserCreateForm(AssignmentMixin, BootstrapMixin, UserCreationForm):
 
     def save(self, commit=True):
         self.instance.role = self.role
+        if self.role == User.Role.ADMIN:
+            self.instance.is_staff = False
+            self.instance.is_superuser = False
         return super().save(commit)
 
 
