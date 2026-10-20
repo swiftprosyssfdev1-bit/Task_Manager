@@ -17,15 +17,12 @@ from .models import User
 from .permissions import RoleRequiredMixin, TitleMixin
 
 
-LIST_URL = {User.Role.ADMIN: "admin_list", User.Role.MANAGER: "manager_list", User.Role.EMPLOYEE: "user_list"}
+LIST_URL = {User.Role.MANAGER: "manager_list", User.Role.EMPLOYEE: "user_list"}
 
 
 def managed_accounts(user, role):
     """Accounts of `role` this user may open: admin -> all of them, manager -> only their own employees."""
     qs = User.objects.filter(role=role).select_related("department", "manager")
-    if role == User.Role.ADMIN:
-        # Superusers (Django administrators) are managed only in Django admin, never from the app.
-        return qs.filter(is_superuser=False) if user.is_admin_role else qs.none()
     if user.is_admin_role:
         return qs
     if user.is_manager_role and role == User.Role.EMPLOYEE:
@@ -45,8 +42,6 @@ class AccountPageMixin(RoleRequiredMixin):
         user = self.request.user
         if user.is_admin_role:
             return True
-        if self.account_role == User.Role.ADMIN:
-            return False
         return (not self.write_access) and user.is_manager_role and self.account_role == User.Role.EMPLOYEE
 
     def get_success_url(self):
@@ -113,7 +108,7 @@ class UserCreateView(AccountPageMixin, SuccessMessageMixin, CreateView):
 
     def dispatch(self, request, *args, **kwargs):
         user = request.user
-        if user.is_authenticated and user.is_admin_role and kwargs.get("role") != User.Role.ADMIN:
+        if user.is_authenticated and user.is_admin_role:
             if not Department.objects.filter(is_active=True).exists():
                 messages.info(request, "Add a department first, then add its manager.")
                 return redirect("department_create")

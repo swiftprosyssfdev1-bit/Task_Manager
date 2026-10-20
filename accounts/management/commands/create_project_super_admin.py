@@ -6,8 +6,8 @@ from accounts.models import User
 
 
 class Command(BaseCommand):
-    help = ("Create an app Admin: full access inside the app, but no Django administration (/admin/) access. "
-            "Use createsuperuser for a Django administrator (full Django admin access).")
+    help = ("Create THE app Admin (only one allowed): full access inside the app, but no Django administration "
+            "(/admin/) access. Use createsuperuser for a Django administrator.")
 
     def add_arguments(self, parser):
         parser.add_argument("username")
@@ -17,6 +17,9 @@ class Command(BaseCommand):
         parser.add_argument("--password", help="Leave out to be asked for it (recommended).")
 
     def handle(self, *args, **options):
+        existing = User.objects.filter(role=User.Role.ADMIN, is_superuser=False).first()
+        if existing:
+            raise CommandError(f"The app already has its admin ('{existing.username}'). Only one is allowed.")
         username = options["username"].strip()
         if not username:
             raise CommandError("Username is required.")
