@@ -39,6 +39,27 @@ function toggleNav(name, btn) {
       <a href="{% url 'dashboard' %}"><img class="brand-logo" src="{% static 'img/swift-prosys-logo.jpg' %}" alt="Swift ProSys"></a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar"></button>
     </div>
+    {% if user.is_admin_role %}
+    <div class="px-3 py-2 border-bottom mb-2 bg-light bg-opacity-50">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <label for="sidebarBranchSelect" class="small text-muted fw-bold mb-0" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">
+          <i class="bi bi-geo-alt-fill text-primary me-1"></i>Branch Scope
+        </label>
+        {% if active_branch %}
+          <a href="{% url 'set_active_branch' %}?branch=&next={{ request.get_full_path|urlencode }}" class="badge text-bg-secondary text-decoration-none" title="Reset to all branches" style="font-size: 0.65rem;">Reset</a>
+        {% endif %}
+      </div>
+      <form method="get" action="{% url 'set_active_branch' %}" id="sidebarBranchForm">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <select class="form-select form-select-sm" name="branch" id="sidebarBranchSelect" onchange="document.getElementById('sidebarBranchForm').submit()">
+          <option value="">All branches</option>
+          {% for b_val, b_label in branches %}
+            <option value="{{ b_val }}" {% if active_branch == b_val %}selected{% endif %}>{{ b_label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    {% endif %}
     <nav class="sidebar-nav">
       <button type="button" class="nav-section nav-toggle" data-nav-toggle="workspace" aria-expanded="true" onclick="return toggleNav('workspace', this)">Workspace<i class="bi bi-chevron-down"></i></button>
       <div class="nav-group" data-nav-group="workspace">

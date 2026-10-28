@@ -75,6 +75,12 @@ body { background: var(--page); }
 .tone-info .stat-icon { background: rgba(111, 66, 193, .12); color: #5b36a3; }
 .tone-secondary .stat-icon { background: rgba(102, 112, 133, .13); color: #475467; }
 
+/* ---- custom multi-select dropdown */
+.custom-multiselect .dropdown-menu { z-index: 1050; border: 1px solid var(--line); border-radius: .7rem; }
+.custom-multiselect .dropdown-item:hover, .custom-multiselect .dropdown-item:focus { background-color: #f3f9fd; }
+.custom-multiselect .dropdown-item input[type=checkbox] { accent-color: var(--brand-blue-dark); width: 1.05rem; height: 1.05rem; cursor: pointer; }
+.custom-multiselect .ms-options-list { max-height: 200px; overflow-y: auto; }
+
 /* ---- sign-in and password pages */
 .auth-wrap { max-width: 420px; margin: 0 auto; padding-top: 2.5rem; }
 .auth-logo { display: block; width: 280px; max-width: 80%; margin: 0 auto 1.25rem; mix-blend-mode: multiply; }

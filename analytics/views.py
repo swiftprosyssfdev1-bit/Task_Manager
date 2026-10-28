@@ -1,7 +1,7 @@
 from collections import Counter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -35,15 +35,25 @@ class TeamAnalyticsView(RoleRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user, today = self.request.user, timezone.localdate()
-        form = AnalyticsFilterForm(self.request.GET or None, user=user)
+        branch = ""
+        if user.is_admin_role:
+            if "branch" in self.request.GET:
+                branch = self.request.GET.get("branch", "").strip()
+                self.request.session["active_branch"] = branch
+            else:
+                branch = self.request.session.get("active_branch", "")
+        form = AnalyticsFilterForm(self.request.GET or None, user=user, branch=branch)
         start, end = _period(form, today)
         tasks = Task.objects.visible_to(user).filter(is_archived=False)
+        if branch and user.is_admin_role:
+            tasks = tasks.filter(Q(assigned_to__branch=branch) | Q(project__branch=branch))
         if form.is_valid():
             if form.cleaned_data.get("project"):
                 tasks = tasks.filter(project=form.cleaned_data["project"])
             if form.cleaned_data.get("employee"):
                 tasks = tasks.filter(assigned_to=form.cleaned_data["employee"])
         ctx.update(filter_form=form, start=start, end=end,
+                   selected_branch=branch,
                    employees=services.employee_stats(tasks, start, end, services.get_holidays(), today),
                    projects=services.project_stats(tasks, today),
                    workload_threshold=services.workload_threshold())

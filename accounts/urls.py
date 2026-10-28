@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("", views.DashboardView.as_view(), name="dashboard"),
+    path("branch/set/", views.SetActiveBranchView.as_view(), name="set_active_branch"),
     # Admin: managers
     path("managers/", views.UserListView.as_view(), {"role": "manager"}, name="manager_list"),
     path("managers/new/", views.UserCreateView.as_view(), {"role": "manager"}, name="manager_create"),

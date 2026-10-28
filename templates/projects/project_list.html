@@ -4,26 +4,37 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Projects</h1>
   <div class="d-flex gap-2 align-items-center">
-    {% if user.is_admin_role %}<form method="get"><select class="form-select form-select-sm" name="department" onchange="this.form.submit()">
-      <option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
-    </select></form>{% endif %}
-    {% if user.can_assign_tasks %}<a class="btn btn-primary btn-sm" href="{% url 'project_create' %}">New project</a>{% endif %}
+    <form method="get" class="d-flex gap-2">
+      {% if user.is_admin_role %}
+      <select class="form-select form-select-sm" name="department" onchange="this.form.submit()">
+        <option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      </select>
+      <select class="form-select form-select-sm" name="branch" onchange="this.form.submit()">
+        <option value="">All branches</option>
+        {% for b_val, b_label in branches %}
+        <option value="{{ b_val }}" {% if selected_branch == b_val %}selected{% endif %}>{{ b_label }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+    </form>
+    {% if user.can_assign_tasks %}<a class="btn btn-primary btn-sm text-nowrap" href="{% url 'project_create' %}"><i class="bi bi-plus-lg me-1"></i>New project</a>{% endif %}
   </div>
 </div>
 <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-  <thead><tr><th>Department</th><th>Project</th><th>Manager</th>{% if user.tracks_technologies %}<th>Technologies</th>{% endif %}<th>Tasks</th><th style="width:220px">Completion</th><th>Status</th></tr></thead>
+  <thead><tr><th>Department</th><th>Branch</th><th>Project</th><th>Manager</th>{% if user.tracks_technologies %}<th>Technologies</th>{% endif %}<th>Tasks</th><th style="width:220px">Completion</th><th>Status</th></tr></thead>
   <tbody>
   {% for p in projects %}
     <tr>
       <td>{{ p.department.name|default:"-" }}</td>
-      <td><a href="{% url 'project_detail' p.pk %}">{{ p.name }}</a> <span class="text-muted small">{{ p.code }}</span></td>
+      <td>{% if p.branch %}<span class="badge text-bg-light border text-dark"><i class="bi bi-geo-alt me-1 text-primary"></i>{{ p.branch }}</span>{% else %}-{% endif %}</td>
+      <td><a class="fw-semibold" href="{% url 'project_detail' p.pk %}">{{ p.name }}</a> <span class="text-muted small">{{ p.code }}</span></td>
       <td>{{ p.manager.display_name|default:"-" }}</td>
       {% if user.tracks_technologies %}<td>{% for t in p.technologies.all %}<span class="tech-chip">{{ t.name }}</span>{% empty %}-{% endfor %}</td>{% endif %}
       <td>{{ p.task_done }} / {{ p.task_total }}</td>
       <td><div class="progress" style="height:8px"><div class="progress-bar" style="width:{% widthratio p.task_done p.task_total 100 %}%"></div></div></td>
       <td>{% if p.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
     </tr>
-  {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No projects yet.</td></tr>{% endfor %}
+  {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No projects yet.</td></tr>{% endfor %}
   </tbody></table></div></div>
 {% include "_pagination.html" %}
 {% endblock %}

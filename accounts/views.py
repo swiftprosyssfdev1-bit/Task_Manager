@@ -1,3 +1,5 @@
+import re
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
@@ -9,7 +11,7 @@ from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from analytics.services import dashboard_data
 from notifications import services as notifications
-from projects.models import Department
+from projects.models import Department, Project
 from tasks.models import Task
 
 from .forms import UserCreateForm, UserUpdateForm
@@ -18,6 +20,20 @@ from .permissions import RoleRequiredMixin, TitleMixin
 
 
 LIST_URL = {User.Role.MANAGER: "manager_list", User.Role.EMPLOYEE: "user_list"}
+
+
+class SetActiveBranchView(LoginRequiredMixin, View):
+    def get(self, request):
+        if request.user.is_admin_role:
+            branch = request.GET.get("branch", "").strip()
+            request.session["active_branch"] = branch
+        next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "/"
+        if not next_url.startswith("/") or next_url.startswith("//"):
+            next_url = "/"
+        clean_url = re.sub(r'([?&])branch=[^&]*(&|$)', r'\1', next_url).rstrip('?&')
+        if not clean_url:
+            clean_url = "/"
+        return redirect(clean_url)
 
 
 def managed_accounts(user, role):
@@ -55,8 +71,47 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         if not self.request.user.is_admin_role:
             notifications.sweep_overdue_if_due()  # keeps "overdue" alerts current without needing a scheduler
-        ctx.update(dashboard_data(self.request.user))
+        if self.request.user.is_manager_role:
+            notifications.notify_unassigned_employees(self.request.user)
+            ctx["unassigned_employees"] = notifications.unassigned_employees_for_manager(self.request.user)
+        selected_branch = ""
+        if self.request.user.is_admin_role:
+            if "branch" in self.request.GET:
+                selected_branch = self.request.GET.get("branch", "").strip()
+                self.request.session["active_branch"] = selected_branch
+            else:
+                selected_branch = self.request.session.get("active_branch", "")
+            ctx["selected_branch"] = selected_branch
+            ctx["branches"] = User.Branch.choices
+            branch_cards = []
+            for branch_val, branch_label in User.Branch.choices:
+                if selected_branch and branch_val != selected_branch:
+                    continue
+                mgrs = list(User.objects.filter(role=User.Role.MANAGER, branch=branch_val, is_active=True).order_by("first_name", "username"))
+                emp_count = User.objects.filter(role=User.Role.EMPLOYEE, branch=branch_val, is_active=True).count()
+                proj_count = Project.objects.filter(branch=branch_val, is_active=True).count()
+                task_count = Task.objects.filter(
+                    Q(assigned_to__branch=branch_val) | Q(project__branch=branch_val),
+                    is_archived=False
+                ).distinct().count()
+                branch_cards.append({
+                    "name": branch_label,
+                    "code": branch_val,
+                    "managers": mgrs,
+                    "manager_count": len(mgrs),
+                    "employee_count": emp_count,
+                    "project_count": proj_count,
+                    "task_count": task_count,
+                    "add_manager_url": reverse("manager_create") + f"?branch={branch_val}",
+                    "add_employee_url": reverse("user_create") + f"?branch={branch_val}",
+                    "view_managers_url": reverse("manager_list") + f"?branch={branch_val}",
+                    "view_projects_url": reverse("project_list") + f"?branch={branch_val}",
+                })
+            ctx["branch_cards"] = branch_cards
+        ctx.update(dashboard_data(self.request.user, branch=selected_branch if self.request.user.is_admin_role else None))
         qs = Task.objects.visible_to(self.request.user).filter(is_archived=False)
+        if self.request.user.is_admin_role and selected_branch:
+            qs = qs.filter(Q(assigned_to__branch=selected_branch) | Q(project__branch=selected_branch))
         ctx["recent_tasks"] = qs.select_related("project", "assigned_to").prefetch_related("technologies").with_hours().order_by("-created_at")[:8]
         return ctx
 
@@ -69,9 +124,17 @@ class UserListView(AccountPageMixin, ListView):
 
     def get_queryset(self):
         qs = managed_accounts(self.request.user, self.account_role).order_by("first_name", "username")
-        dept = self.request.GET.get("department", "")
-        if self.request.user.is_admin_role and dept.isdigit():
-            qs = qs.filter(department_id=int(dept))
+        if self.request.user.is_admin_role:
+            dept = self.request.GET.get("department", "")
+            if dept.isdigit():
+                qs = qs.filter(department_id=int(dept))
+            if "branch" in self.request.GET:
+                branch = self.request.GET.get("branch", "").strip()
+                self.request.session["active_branch"] = branch
+            else:
+                branch = self.request.session.get("active_branch", "")
+            if branch:
+                qs = qs.filter(branch=branch)
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(Q(username__icontains=q) | Q(first_name__icontains=q)
@@ -87,6 +150,11 @@ class UserListView(AccountPageMixin, ListView):
         ctx["role_label"] = User.Role(self.account_role).label
         ctx["departments"] = Department.objects.all() if self.request.user.is_admin_role else []
         ctx["selected_department"] = self.request.GET.get("department", "")
+        branch = self.request.GET.get("branch")
+        if branch is None and self.request.user.is_admin_role:
+            branch = self.request.session.get("active_branch", "")
+        ctx["branches"] = User.Branch.choices if self.request.user.is_admin_role else []
+        ctx["selected_branch"] = branch or ""
         return ctx
 
 
@@ -127,6 +195,8 @@ class UserCreateView(AccountPageMixin, SuccessMessageMixin, CreateView):
                 initial["manager"], initial["department"] = boss.pk, boss.department_id
         if get.get("department", "").isdigit():
             initial.setdefault("department", int(get["department"]))
+        if get.get("branch", ""):
+            initial.setdefault("branch", get["branch"])
         return initial
 
     def get_form_kwargs(self):

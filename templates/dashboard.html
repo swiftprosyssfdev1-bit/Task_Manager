@@ -4,7 +4,7 @@
 <div class="hero">
   <div>
     <h1>Hello, {{ user.first_name|default:user.username }} 👋</h1>
-    <div class="sub">{% now "l, d F Y" %} &middot; {% if user.can_manage_tasks %}{% if user.department %}{{ user.department.name }} &middot; {% endif %}Team overview{% else %}Your work at a glance{% endif %}</div>
+    <div class="sub">{% now "l, d F Y" %} &middot; {% if selected_branch %}<span class="badge text-bg-light text-dark"><i class="bi bi-geo-alt me-1 text-primary"></i>{{ selected_branch }}</span> &middot; {% endif %}{% if user.can_manage_tasks %}{% if user.department %}{{ user.department.name }} &middot; {% endif %}Team overview{% else %}Your work at a glance{% endif %}</div>
   </div>
   <div class="d-flex gap-2 flex-wrap">
     {% if user.can_assign_tasks %}
@@ -16,6 +16,30 @@
   </div>
 </div>
 
+{% if unassigned_employees %}
+<div class="alert alert-warning border-warning d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 shadow-sm" role="alert">
+  <div class="d-flex align-items-center gap-2">
+    <i class="bi bi-person-exclamation fs-4 text-warning"></i>
+    <div>
+      <div class="fw-bold">Task assignment reminder</div>
+      <div class="small">
+        You have not assigned any task for today to:
+        {% for emp in unassigned_employees %}
+          <span class="badge text-bg-warning text-dark me-1">{{ emp.display_name }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div>
+    {% with first_emp=unassigned_employees.0 %}
+    <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'task_create' %}?assigned_to={{ first_emp.pk }}">
+      <i class="bi bi-plus-lg me-1"></i>Assign task
+    </a>
+    {% endwith %}
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
   {% for label, value, icon, tone in cards %}
   <div class="col-6 col-md-4 col-xl"><div class="mini-stat tone-{{ tone }}">
@@ -25,7 +49,65 @@
   {% endfor %}
 </div>
 
-<div class="section-title">Projects <a class="view-all" href="{% url 'project_list' %}">View all <i class="bi bi-arrow-right"></i></a></div>
+{% if user.is_admin_role %}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="h5 mb-0 fw-bold"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Branches Overview</h2>
+      <div class="text-muted small">Branches and manager creation by location</div>
+    </div>
+    <form method="get" class="d-flex align-items-center gap-2">
+      <label class="small text-muted fw-semibold text-nowrap"><i class="bi bi-filter me-1"></i>Branch:</label>
+      <select class="form-select form-select-sm" name="branch" onchange="this.form.submit()" style="min-width: 170px;">
+        <option value="">All branches</option>
+        {% for b_val, b_label in branches %}
+          <option value="{{ b_val }}" {% if selected_branch == b_val %}selected{% endif %}>{{ b_label }}</option>
+        {% endfor %}
+      </select>
+      {% if selected_branch %}
+        <a href="{% url 'set_active_branch' %}?branch=&next={% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm text-nowrap" title="Reset to all branches"><i class="bi bi-x-lg me-1"></i>Reset</a>
+      {% endif %}
+    </form>
+  </div>
+  <div class="row g-3">
+    {% for b in branch_cards %}
+    <div class="{% if branch_cards|length == 1 %}col-md-6 col-xl-4{% else %}col-md-6 col-xl-3{% endif %}">
+      <div class="card h-100 shadow-sm border-top border-3 border-primary">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h6 mb-0 fw-bold"><i class="bi bi-building me-1 text-primary"></i>{{ b.name }}</h3>
+              <span class="badge text-bg-light border text-dark">{{ b.manager_count }} manager{{ b.manager_count|pluralize }}</span>
+            </div>
+            <div class="text-muted small mb-3">
+              {% for m in b.managers %}
+                <span class="badge text-bg-light border text-dark me-1 mb-1"><i class="bi bi-person-badge text-secondary me-1"></i>{{ m.display_name }}</span>
+              {% empty %}
+                <span class="text-muted fst-italic">No managers yet</span>
+              {% endfor %}
+            </div>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between small text-muted border-top pt-2 mb-3">
+              <span><i class="bi bi-people me-1"></i><strong>{{ b.employee_count }}</strong> staff</span>
+              <span><i class="bi bi-folder me-1"></i><strong>{{ b.project_count }}</strong> projects</span>
+              <span><i class="bi bi-check2-square me-1"></i><strong>{{ b.task_count }}</strong> tasks</span>
+            </div>
+            <a href="{{ b.add_manager_url }}" class="btn btn-primary btn-sm w-100 fw-medium">
+              <i class="bi bi-person-plus me-1"></i>Add Manager
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="card"><div class="card-body text-center text-muted py-4">No details found for branch "{{ selected_branch }}". <a href="{% url 'dashboard' %}">Show all branches</a></div></div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="section-title">Projects {% if selected_branch %}<span class="badge text-bg-light border text-dark ms-1"><i class="bi bi-geo-alt me-1 text-primary"></i>{{ selected_branch }}</span>{% endif %} <a class="view-all" href="{% url 'project_list' %}{% if selected_branch %}?branch={{ selected_branch }}{% endif %}">View all <i class="bi bi-arrow-right"></i></a></div>
 <div class="row g-3 mb-4">
   {% for p in project_cards %}
   <div class="col-md-6 col-xl-4"><div class="proj-card">
@@ -63,15 +145,7 @@
       </tbody></table></div></div></div>
 </div>
 
-{% if charts.workload %}
-<div class="row g-3 mb-4">
-  <div class="col-xl-6"><div class="card h-100"><div class="card-header">Employee workload <span class="small-note fw-normal">(open tasks)</span></div>
-    <div class="card-body"><div class="chart-box sm"><canvas id="chWorkload"></canvas></div></div></div></div>
-  <div class="col-xl-6">{% include "analytics/_side_lists.html" %}</div>
-</div>
-{% else %}
 <div class="mb-4">{% include "analytics/_side_lists.html" %}</div>
-{% endif %}
 
 <div class="card"><div class="card-header">Recent tasks</div>
 {% include "tasks/_task_table.html" with tasks=recent_tasks compact=True %}

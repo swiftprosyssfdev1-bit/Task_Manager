@@ -125,3 +125,59 @@ def sweep_overdue_if_due(every_seconds=1800):
     if cache.add("notifications:overdue-sweep", timezone.now().isoformat(), every_seconds):
         return notify_overdue()
     return 0
+
+
+# ------------------------------------------------------------------ unassigned reminder
+def unassigned_employees_for_manager(manager):
+    """Active employees assigned to this manager who have no open tasks or tasks assigned for today."""
+    if not manager or not manager.is_manager_role:
+        return []
+    from django.db.models import Q
+    from tasks.models import Task
+
+    today = timezone.localdate()
+    employees = list(manager.team.filter(is_active=True).order_by("first_name", "username"))
+    if not employees:
+        return []
+    
+    assigned_ids = set(Task.objects.filter(
+        assigned_to__in=employees,
+        is_archived=False
+    ).filter(
+        Q(assign_date=today) | Q(status__in=Task.OPEN_STATUSES)
+    ).values_list("assigned_to_id", flat=True))
+
+    return [emp for emp in employees if emp.pk not in assigned_ids]
+
+
+def notify_unassigned_employees(manager=None):
+    """Notify managers if they forgot to assign daily tasks to their active employees.
+    Runs once per manager per employee per day."""
+    from accounts.models import User
+
+    managers = [manager] if manager else list(User.objects.filter(role=User.Role.MANAGER, is_active=True))
+    today = timezone.localdate()
+    existing = set(Notification.objects.filter(kind=Kind.UNASSIGNED).values_list("recipient_id", "dedupe_key"))
+    fresh = []
+
+    for m in managers:
+        if not m.is_active:
+            continue
+        unassigned = unassigned_employees_for_manager(m)
+        for emp in unassigned:
+            key = f"unassigned:{m.pk}:{emp.pk}:{today.isoformat()}"
+            if (m.pk, key) not in existing:
+                existing.add((m.pk, key))
+                msg = f"Reminder: You have not assigned any task to {emp.display_name} today."
+                fresh.append(Notification(recipient=m, kind=Kind.UNASSIGNED, message=msg, dedupe_key=key))
+
+    if fresh:
+        Notification.objects.bulk_create(fresh, ignore_conflicts=True)
+    return len(fresh)
+
+
+def sweep_unassigned_if_due(manager=None, every_seconds=1800):
+    key = f"notifications:unassigned-sweep:{manager.pk if manager else 'all'}"
+    if cache.add(key, timezone.now().isoformat(), every_seconds):
+        return notify_unassigned_employees(manager)
+    return 0

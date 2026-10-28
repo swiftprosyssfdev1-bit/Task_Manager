@@ -320,14 +320,16 @@ def _brief(qs, n=6):
     return list(qs.select_related("project__department", "assigned_to")[:n])
 
 
-def project_cards(user, today, limit=6):
+def project_cards(user, today, limit=6, branch=None):
     """Active projects the user can see, with progress, technologies, team and how long they have been running."""
     from projects.models import Project
     live = Q(tasks__is_archived=False)
-    qs = (Project.objects.visible_to(user).filter(is_active=True)
-          .annotate(task_total=Count("tasks", filter=live, distinct=True),
-                    task_done=Count("tasks", filter=live & Q(tasks__status=Task.Status.COMPLETED), distinct=True),
-                    first_assign=Min("tasks__assign_date"))
+    qs = Project.objects.visible_to(user).filter(is_active=True)
+    if branch:
+        qs = qs.filter(branch=branch)
+    qs = (qs.annotate(task_total=Count("tasks", filter=live, distinct=True),
+                      task_done=Count("tasks", filter=live & Q(tasks__status=Task.Status.COMPLETED), distinct=True),
+                      first_assign=Min("tasks__assign_date"))
           .select_related("manager", "department").prefetch_related("technologies", "memberships__user").order_by("name")[:limit])
     cards = []
     for p in qs:
@@ -347,14 +349,16 @@ def today_tasks(tasks, today, limit=8):
     return list(qs.select_related("project__department", "assigned_to").order_by("status", "-priority", "id")[:limit])
 
 
-def dashboard_data(user, today=None):
+def dashboard_data(user, today=None, branch=None):
     today = today or timezone.localdate()
     S = Task.Status
     tasks = Task.objects.visible_to(user).filter(is_archived=False)
+    if branch:
+        tasks = tasks.filter(Q(assigned_to__branch=branch) | Q(project__branch=branch))
     open_qs = tasks.filter(status__in=Task.OPEN_STATUSES)
     overdue_qs = tasks.overdue().order_by("est_date")
     month_start = today.replace(day=1)
-    charts = {"workload": None}  # the dashboard only draws the manager workload chart
+    charts = {}  # the dashboard no longer draws any chart
     if user.can_manage_tasks:
         cards = [("Assigned this month", tasks.filter(assign_date__gte=month_start).count(), "bi-clipboard-plus", "primary"),
                  ("Completed this month", tasks.filter(status=S.COMPLETED, completed_date__gte=month_start).count(),
@@ -364,7 +368,6 @@ def dashboard_data(user, today=None):
                  ("Awaiting review", tasks.filter(status=S.PENDING_REVIEW).count(), "bi-hourglass-split", "info")]
         side = [("Awaiting review", _brief(tasks.filter(status=S.PENDING_REVIEW).order_by("updated_at"))),
                 ("Overdue", _brief(overdue_qs))]
-        charts["workload"] = workload(tasks, today)
     else:
         hours = TaskWorkLog.objects.filter(employee=user).aggregate(t=Sum("duration_hours"))["t"] or Decimal("0")
         cards = [("My tasks", tasks.exclude(status=S.CANCELLED).count(), "bi-list-task", "primary"),
@@ -378,4 +381,4 @@ def dashboard_data(user, today=None):
         upcoming = open_qs.filter(est_date__gte=today, est_date__lte=today + timedelta(days=7)).order_by("est_date")
         side = [("Upcoming deadlines", _brief(upcoming)), ("Overdue", _brief(overdue_qs))]
     return {"cards": cards, "side_lists": side, "charts": charts,
-            "project_cards": project_cards(user, today), "today_list": today_tasks(tasks, today)}
+            "project_cards": project_cards(user, today, branch=branch), "today_list": today_tasks(tasks, today)}

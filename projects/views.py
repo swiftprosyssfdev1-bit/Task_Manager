@@ -23,9 +23,17 @@ class ProjectListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         live = Q(tasks__is_archived=False)
         qs = Project.objects.visible_to(self.request.user)
-        dept = self.request.GET.get("department", "")
-        if dept.isdigit():
-            qs = qs.filter(department_id=int(dept))
+        if self.request.user.is_admin_role:
+            dept = self.request.GET.get("department", "")
+            if dept.isdigit():
+                qs = qs.filter(department_id=int(dept))
+            if "branch" in self.request.GET:
+                branch = self.request.GET.get("branch", "").strip()
+                self.request.session["active_branch"] = branch
+            else:
+                branch = self.request.session.get("active_branch", "")
+            if branch:
+                qs = qs.filter(branch=branch)
         return (qs.select_related("manager", "department").prefetch_related("technologies")
                 .annotate(task_total=Count("tasks", filter=live, distinct=True),
                           task_done=Count("tasks", filter=live & Q(tasks__status=Task.Status.COMPLETED),
@@ -37,6 +45,11 @@ class ProjectListView(LoginRequiredMixin, ListView):
         user = self.request.user
         ctx["departments"] = Department.objects.all() if user.is_admin_role else Department.objects.none()
         ctx["selected_department"] = self.request.GET.get("department", "")
+        branch = self.request.GET.get("branch")
+        if branch is None and user.is_admin_role:
+            branch = self.request.session.get("active_branch", "")
+        ctx["branches"] = User.Branch.choices if user.is_admin_role else []
+        ctx["selected_branch"] = branch or ""
         return ctx
 
 
@@ -151,13 +164,21 @@ class DepartmentListView(RoleRequiredMixin, ListView):
     context_object_name = "departments"
 
     def get_queryset(self):
-        return Department.objects.prefetch_related(
+        qs = Department.objects.prefetch_related(
             Prefetch("staff", queryset=User.objects.filter(role=User.Role.MANAGER).order_by("first_name", "username"),
                      to_attr="managers")
         ).annotate(
             project_count=Count("projects", distinct=True),
             task_count=Count("projects__tasks", filter=Q(projects__tasks__is_archived=False), distinct=True),
             employee_count=Count("staff", filter=Q(staff__role=User.Role.EMPLOYEE), distinct=True))
+        if "branch" in self.request.GET:
+            branch = self.request.GET.get("branch", "").strip()
+            self.request.session["active_branch"] = branch
+        else:
+            branch = self.request.session.get("active_branch", "")
+        if branch:
+            qs = qs.filter(Q(branch=branch) | Q(branch=""))
+        return qs
 
 
 class DepartmentCreateView(RoleRequiredMixin, TitleMixin, SuccessMessageMixin, CreateView):

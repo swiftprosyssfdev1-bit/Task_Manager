@@ -15,6 +15,7 @@ class Notification(models.Model):
         DEADLINE = "deadline", "Deadline changed"
         COMMENT = "comment", "New comment"
         OVERDUE = "overdue", "Overdue"
+        UNASSIGNED = "unassigned", "Task assignment reminder"
 
     # Bootstrap icon and colour for each kind, used by the list page.
     STYLE = {
@@ -23,6 +24,7 @@ class Notification(models.Model):
         Kind.REWORK: ("bi-arrow-counterclockwise", "warning"), Kind.BLOCKED: ("bi-slash-circle", "danger"),
         Kind.STATUS: ("bi-arrow-repeat", "secondary"), Kind.DEADLINE: ("bi-calendar-event", "warning"),
         Kind.COMMENT: ("bi-chat-left-text", "primary"), Kind.OVERDUE: ("bi-exclamation-triangle", "danger"),
+        Kind.UNASSIGNED: ("bi-person-exclamation", "warning"),
     }
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
@@ -54,4 +56,8 @@ class Notification(models.Model):
 
     @property
     def url(self):
-        return reverse("task_detail", args=[self.task_id]) if self.task_id else reverse("notification_list")
+        if self.task_id:
+            return reverse("task_detail", args=[self.task_id])
+        if self.kind == self.Kind.UNASSIGNED:
+            return reverse("task_create")
+        return reverse("notification_list")

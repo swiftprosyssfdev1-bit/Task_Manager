@@ -70,6 +70,9 @@ class AssignmentMixin:
             empty_label="Select manager", label="Reports to (manager)", required=True,
             widget=ManagerSelect(attrs={"class": "form-select"}))
         boss.help_text = "Only this manager can assign tasks to the employee and see their reports."
+        if "branch" in self.fields:
+            self.fields["branch"].empty_label = "Select branch"
+            self.fields["branch"].widget.attrs["class"] = "form-select"
         # Keep the field order department -> manager -> the rest.
         order = [n for n in self.fields if n not in ("department", "manager")]
         self.order_fields(["department", "manager"] + order)
@@ -89,7 +92,7 @@ class UserCreateForm(AssignmentMixin, BootstrapMixin, UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ("department", "manager", "username", "first_name", "last_name", "email", "employee_code",
+        fields = ("department", "manager", "branch", "username", "first_name", "last_name", "email", "employee_code",
                   "designation")
 
     def __init__(self, *args, role=User.Role.EMPLOYEE, **kwargs):
@@ -105,6 +108,8 @@ class UserCreateForm(AssignmentMixin, BootstrapMixin, UserCreationForm):
 
     def save(self, commit=True):
         self.instance.role = self.role
+        if self.instance.department and self.instance.department.branch:
+            self.instance.branch = self.instance.department.branch
         return super().save(commit)
 
 
@@ -113,7 +118,7 @@ class UserUpdateForm(AssignmentMixin, BootstrapMixin, forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("department", "manager", "first_name", "last_name", "email", "employee_code", "designation",
+        fields = ("department", "manager", "branch", "first_name", "last_name", "email", "employee_code", "designation",
                   "is_active")
 
     def __init__(self, *args, **kwargs):
@@ -123,8 +128,10 @@ class UserUpdateForm(AssignmentMixin, BootstrapMixin, forms.ModelForm):
             self.fields["manager"].widget.attrs["class"] = "form-select"
 
     def save(self, commit=True):
+        if self.instance.department and self.instance.department.branch:
+            self.instance.branch = self.instance.department.branch
         user = super().save(commit)
         if commit and user.is_manager_role and "department" in self.changed_data:
-            # A manager's team follows them into the new department.
-            user.team.update(department=user.department)
+            # A manager's team follows them into the new department and branch.
+            user.team.update(department=user.department, branch=user.branch)
         return user

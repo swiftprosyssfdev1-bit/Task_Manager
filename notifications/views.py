@@ -21,6 +21,8 @@ class NotificationListView(RoleRequiredMixin, ListView):
 
     def get_queryset(self):
         services.sweep_overdue_if_due()
+        if self.request.user.is_manager_role:
+            services.sweep_unassigned_if_due(self.request.user)
         qs = Notification.objects.filter(recipient=self.request.user).select_related("task")
         if self.request.GET.get("filter") == "unread":
             qs = qs.filter(is_read=False)

@@ -27,8 +27,17 @@ class ProjectQuerySet(models.QuerySet):
         return self.filter(self._manager_scope(user))
 
 
+BRANCH_CHOICES = [
+    ("Chennai", "Chennai"),
+    ("Tindivanam", "Tindivanam"),
+    ("Kanchipuram", "Kanchipuram"),
+    ("Madurai", "Madurai"),
+]
+
+
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    branch = models.CharField(max_length=50, choices=BRANCH_CHOICES, blank=True, db_index=True)
     description = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
     uses_technologies = models.BooleanField(
@@ -45,6 +54,7 @@ class Department(models.Model):
 
 class Project(models.Model):
     department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.PROTECT, related_name="projects")
+    branch = models.CharField(max_length=50, choices=BRANCH_CHOICES, blank=True, db_index=True)
     name = models.CharField(max_length=150, unique=True)
     code = models.CharField(max_length=20, unique=True)
     description = models.TextField(blank=True)
@@ -71,6 +81,13 @@ class Project(models.Model):
         constraints = [models.CheckConstraint(
             condition=Q(end_date__isnull=True) | Q(start_date__isnull=True) | Q(end_date__gte=models.F("start_date")),
             name="project_end_after_start")]
+
+    def save(self, *args, **kwargs):
+        if self.department and self.department.branch:
+            self.branch = self.department.branch
+        elif self.manager and getattr(self.manager, "branch", None):
+            self.branch = self.manager.branch
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

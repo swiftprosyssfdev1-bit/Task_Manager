@@ -15,11 +15,17 @@ class AnalyticsFilterForm(BootstrapMixin, forms.Form):
     project = forms.ModelChoiceField(Project.objects.none(), required=False, empty_label="All projects")
     employee = forms.ModelChoiceField(User.objects.none(), required=False, empty_label="All employees")
 
-    def __init__(self, *args, user, show_employee=True, **kwargs):
+    def __init__(self, *args, user, show_employee=True, branch=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["project"].queryset = Project.objects.visible_to(user)
+        p_qs = Project.objects.visible_to(user)
+        if branch and user.is_admin_role:
+            p_qs = p_qs.filter(branch=branch)
+        self.fields["project"].queryset = p_qs
         if show_employee:
-            self.fields["employee"].queryset = user.employees_in_scope().order_by("first_name", "username")
+            e_qs = user.employees_in_scope().order_by("first_name", "username")
+            if branch and user.is_admin_role:
+                e_qs = e_qs.filter(branch=branch)
+            self.fields["employee"].queryset = e_qs
         else:
             del self.fields["employee"]
 

@@ -8,7 +8,7 @@
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <div class="row g-3">
     {% for f in form %}
-      <div class="{% if f.widget_type == 'textarea' or f.widget_type == 'checkboxselectmultiple' or f.name == 'attachments' %}col-12{% else %}col-md-6{% endif %}">
+      <div class="{% if f.widget_type == 'textarea' or f.widget_type == 'checkboxselectmultiple' or f.widget_type == 'selectmultiple' or f.name == 'attachments' or f.name == 'team_members' or f.name == 'managers' or f.name == 'assignees' %}col-12{% else %}col-md-6{% endif %}">
         {% if f.widget_type == 'checkbox' %}
           <div class="form-check">{{ f }}<label class="form-check-label" for="{{ f.id_for_label }}">{{ f.label }}</label></div>
         {% elif f.name == 'attachments' %}
@@ -29,6 +29,173 @@
 </div></div></div></div>
 {% endblock %}
 {% block scripts %}
+<script>
+// Multi-select dropdown initializer
+(function () {
+  var selects = document.querySelectorAll('select.multi-select-dropdown');
+  selects.forEach(function (sel) {
+    if (sel.dataset.msInit) return;
+    sel.dataset.msInit = 'true';
+    sel.style.display = 'none';
+
+    var placeholder = sel.getAttribute('data-placeholder') || 'Select options...';
+    var wrap = document.createElement('div');
+    wrap.className = 'dropdown custom-multiselect w-100';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'form-select text-start d-flex justify-content-between align-items-center';
+    btn.setAttribute('data-bs-toggle', 'dropdown');
+    btn.setAttribute('data-bs-auto-close', 'outside');
+    btn.setAttribute('aria-expanded', 'false');
+
+    var textSpan = document.createElement('span');
+    textSpan.className = 'selected-text text-truncate';
+    textSpan.textContent = placeholder;
+    btn.appendChild(textSpan);
+
+    var arrow = document.createElement('i');
+    arrow.className = 'bi bi-chevron-down ms-2 text-muted small';
+    btn.appendChild(arrow);
+    wrap.appendChild(btn);
+
+    var menu = document.createElement('div');
+    menu.className = 'dropdown-menu p-2 shadow-sm w-100';
+
+    var topBar = document.createElement('div');
+    topBar.className = 'px-1 pb-2 mb-2 border-bottom d-flex gap-2 align-items-center';
+
+    var searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'form-control form-control-sm';
+    searchInput.placeholder = 'Search...';
+    topBar.appendChild(searchInput);
+
+    var btnAll = document.createElement('button');
+    btnAll.type = 'button';
+    btnAll.className = 'btn btn-outline-primary btn-sm text-nowrap py-0 px-2';
+    btnAll.style.fontSize = '.75rem';
+    btnAll.textContent = 'All';
+    topBar.appendChild(btnAll);
+
+    var btnClear = document.createElement('button');
+    btnClear.type = 'button';
+    btnClear.className = 'btn btn-outline-secondary btn-sm text-nowrap py-0 px-2';
+    btnClear.style.fontSize = '.75rem';
+    btnClear.textContent = 'Clear';
+    topBar.appendChild(btnClear);
+
+    menu.appendChild(topBar);
+
+    var optList = document.createElement('div');
+    optList.className = 'ms-options-list';
+
+    var items = [];
+    Array.prototype.forEach.call(sel.options, function (opt) {
+      if (!opt.value) return;
+      var lbl = document.createElement('label');
+      lbl.className = 'dropdown-item rounded d-flex align-items-center gap-2 py-1 px-2 mb-1';
+      lbl.style.cursor = 'pointer';
+
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'form-check-input mt-0';
+      cb.value = opt.value;
+      cb.checked = opt.selected;
+
+      var span = document.createElement('span');
+      span.className = 'option-label text-truncate';
+      span.textContent = opt.textContent;
+
+      lbl.appendChild(cb);
+      lbl.appendChild(span);
+      optList.appendChild(lbl);
+
+      items.push({ opt: opt, cb: cb, lbl: lbl, text: opt.textContent.toLowerCase() });
+
+      cb.addEventListener('change', function () {
+        opt.selected = cb.checked;
+        sel.dispatchEvent(new Event('change'));
+        update();
+      });
+    });
+
+    var emptyNotice = document.createElement('div');
+    emptyNotice.className = 'text-muted small p-2 text-center';
+    emptyNotice.textContent = 'No options available';
+    emptyNotice.style.display = items.length === 0 ? '' : 'none';
+    optList.appendChild(emptyNotice);
+
+    menu.appendChild(optList);
+    wrap.appendChild(menu);
+    sel.parentNode.insertBefore(wrap, sel.nextSibling);
+
+    sel._msFilter = function (allowedValues) {
+      var count = 0;
+      items.forEach(function (it) {
+        var ok = !allowedValues || allowedValues.indexOf(String(it.opt.value)) !== -1;
+        it.lbl.style.display = ok ? '' : 'none';
+        if (!ok && it.cb.checked) {
+          it.cb.checked = false;
+          it.opt.selected = false;
+        }
+        if (ok) count++;
+      });
+      emptyNotice.style.display = count === 0 ? '' : 'none';
+      update();
+      return count;
+    };
+
+    function update() {
+      var selTexts = [];
+      items.forEach(function (it) {
+        if (it.cb.checked) selTexts.push(it.opt.textContent);
+      });
+      if (selTexts.length === 0) {
+        textSpan.textContent = placeholder;
+        textSpan.classList.add('text-muted');
+      } else if (selTexts.length <= 2) {
+        textSpan.textContent = selTexts.join(', ');
+        textSpan.classList.remove('text-muted');
+      } else {
+        textSpan.textContent = selTexts.length + ' selected';
+        textSpan.classList.remove('text-muted');
+      }
+    }
+
+    searchInput.addEventListener('input', function () {
+      var val = searchInput.value.trim().toLowerCase();
+      items.forEach(function (it) {
+        it.lbl.style.display = it.text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+
+    btnAll.addEventListener('click', function (e) {
+      e.stopPropagation();
+      items.forEach(function (it) {
+        if (it.lbl.style.display !== 'none') {
+          it.cb.checked = true;
+          it.opt.selected = true;
+        }
+      });
+      sel.dispatchEvent(new Event('change'));
+      update();
+    });
+
+    btnClear.addEventListener('click', function (e) {
+      e.stopPropagation();
+      items.forEach(function (it) {
+        it.cb.checked = false;
+        it.opt.selected = false;
+      });
+      sel.dispatchEvent(new Event('change'));
+      update();
+    });
+
+    update();
+  });
+})();
+</script>
 <script>
 // Employee form: only offer managers of the department that was picked.
 (function () {
@@ -62,20 +229,28 @@
   var depts = JSON.parse(document.getElementById('project-depts').textContent);
   var dsel = document.getElementById('id_department');
   var sel = document.getElementById('id_project');
+  var assigneesSel = document.getElementById('id_assignees');
   var grid = document.querySelector('[data-field="assignees"]');
-  if (!sel || !grid) return;
+  if (!sel) return;
   var note = document.createElement('div');
   note.className = 'text-muted small mt-1'; note.style.display = 'none';
   note.textContent = 'This project has no team members yet. Add them in Projects > Edit project.';
-  grid.parentNode.insertBefore(note, grid.nextSibling);
+  var targetAnchor = (assigneesSel && assigneesSel.nextElementSibling) ? assigneesSel.nextElementSibling : (grid || assigneesSel);
+  if (targetAnchor && targetAnchor.parentNode) {
+    targetAnchor.parentNode.insertBefore(note, targetAnchor.nextSibling);
+  }
   function tick(box, wanted) { box.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = wanted.indexOf(cb.value) !== -1; }); }
   function apply(initial) {
     var pid = sel.value, ids = (members[pid] || []).map(String), tids = (techs[pid] || []).map(String), shown = 0;
-    grid.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
-      var ok = ids.indexOf(cb.value) !== -1;
-      cb.closest('label').style.display = ok ? '' : 'none';
-      if (!ok) cb.checked = false; else shown++;
-    });
+    if (assigneesSel && assigneesSel._msFilter) {
+      shown = assigneesSel._msFilter(pid ? ids : []);
+    } else if (grid) {
+      grid.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+        var ok = ids.indexOf(cb.value) !== -1;
+        cb.closest('label').style.display = ok ? '' : 'none';
+        if (!ok) cb.checked = false; else shown++;
+      });
+    }
     note.style.display = (pid && !shown) ? '' : 'none';
     var tg = document.querySelector('[data-field="technologies"]');
     if (tg && (!initial || !tg.querySelector('input:checked'))) tick(tg, tids);

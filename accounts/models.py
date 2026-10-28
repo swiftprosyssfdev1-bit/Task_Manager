@@ -8,7 +8,14 @@ class User(AbstractUser):
         MANAGER = "manager", "Manager"
         EMPLOYEE = "employee", "Employee"
 
+    class Branch(models.TextChoices):
+        CHENNAI = "Chennai", "Chennai"
+        TINDIVANAM = "Tindivanam", "Tindivanam"
+        KANCHIPURAM = "Kanchipuram", "Kanchipuram"
+        MADURAI = "Madurai", "Madurai"
+
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.EMPLOYEE, db_index=True)
+    branch = models.CharField(max_length=50, choices=Branch.choices, blank=True, null=True, db_index=True)
     employee_code = models.CharField(max_length=30, unique=True, null=True, blank=True)
     designation = models.CharField(max_length=100, blank=True)
     # Admin puts every manager and employee in a department, and each employee under one manager of it.

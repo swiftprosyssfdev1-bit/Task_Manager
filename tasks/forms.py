@@ -70,8 +70,14 @@ class TaskForm(AttachmentFormMixin, BootstrapMixin, forms.ModelForm):
 class TaskCreateForm(TaskForm):
     """Manager creates a (daily) task for one project and assigns it to one or more team members."""
     assignees = forms.ModelMultipleChoiceField(
-        queryset=User.objects.none(), label="Assign to", widget=forms.CheckboxSelectMultiple,
-        help_text="Tick one employee, or several. One task is created for each. Only the project's team is shown.")
+        queryset=User.objects.none(),
+        label="Assign to",
+        widget=forms.SelectMultiple(attrs={
+            "class": "form-select multi-select-dropdown",
+            "data-placeholder": "Select team members...",
+            "data-field": "assignees",
+        }),
+        help_text="Select one employee, or several. One task is created for each. Only the project's team is shown.")
 
     class Meta(TaskForm.Meta):
         fields = ["title", "description", "project", "priority", "status", "assign_date", "est_date", "end_date",
@@ -145,13 +151,18 @@ class TaskFilterForm(BootstrapMixin, forms.Form):
     overdue = forms.BooleanField(required=False, label="Overdue only")
     ordering = forms.ChoiceField(choices=ORDERING, required=False)
 
-    def __init__(self, *args, user, **kwargs):
+    def __init__(self, *args, user, branch=None, **kwargs):
         super().__init__(*args, **kwargs)
         colour_priority(self.fields["priority"])
-        colour_priority(self.fields["priority"])
-        self.fields["project"].queryset = Project.objects.visible_to(user)
+        p_qs = Project.objects.visible_to(user)
+        if branch and user.is_admin_role:
+            p_qs = p_qs.filter(branch=branch)
+        self.fields["project"].queryset = p_qs
         if user.can_manage_tasks:
-            self.fields["employee"].queryset = user.employees_in_scope().order_by("first_name", "username")
+            e_qs = user.employees_in_scope().order_by("first_name", "username")
+            if branch and user.is_admin_role:
+                e_qs = e_qs.filter(branch=branch)
+            self.fields["employee"].queryset = e_qs
         else:
             del self.fields["employee"]
 

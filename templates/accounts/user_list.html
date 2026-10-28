@@ -8,17 +8,21 @@
   {% if user.is_admin_role %}<a class="btn btn-primary btn-sm" href="{% if account_role == 'manager' %}{{ manager_create_url }}{% else %}{{ employee_create_url }}{% endif %}">Add {{ role_label|lower }}</a>{% endif %}
 </div>
 <form method="get" class="row g-2 mb-3">
-  <div class="col-md-4"><input class="form-control" name="q" placeholder="Search name, username or email" value="{{ request.GET.q }}"></div>
-  {% if user.is_admin_role %}<div class="col-md-3"><select class="form-select" name="department"><option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>{% endif %}
+  <div class="col-md-3"><input class="form-control" name="q" placeholder="Search name, username or email" value="{{ request.GET.q }}"></div>
+  {% if user.is_admin_role %}
+  <div class="col-md-3"><select class="form-select" name="department"><option value="">All departments</option>{% for d in departments %}<option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+  <div class="col-md-3"><select class="form-select" name="branch"><option value="">All branches</option>{% for b_val, b_label in branches %}<option value="{{ b_val }}" {% if selected_branch == b_val %}selected{% endif %}>{{ b_label }}</option>{% endfor %}</select></div>
+  {% endif %}
   <div class="col-auto"><button class="btn btn-secondary">Apply filters</button></div>
 </form>
 <div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
-  <thead><tr><th>Name</th><th>Username</th><th>Department</th>{% if account_role == 'employee' %}<th>Manager</th>{% endif %}<th>Code</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Username</th><th>Department</th><th>Branch</th>{% if account_role == 'employee' %}<th>Manager</th>{% endif %}<th>Code</th><th>Status</th><th></th></tr></thead>
   <tbody>
   {% for u in users %}
     <tr>
       <td>{{ u.display_name }}<div class="text-muted small">{{ u.email }}</div></td><td>{{ u.username }}</td>
       <td>{{ u.department.name|default:"-" }}</td>
+      <td>{% if u.branch %}<span class="badge text-bg-light border text-dark"><i class="bi bi-geo-alt me-1 text-primary"></i>{{ u.branch }}</span>{% else %}-{% endif %}</td>
       {% if account_role == 'employee' %}<td>{% if u.manager %}{{ u.manager.display_name }}{% else %}<span class="badge text-bg-warning">Not assigned</span>{% endif %}</td>{% endif %}
       <td>{{ u.employee_code|default:"-" }}</td>
       <td>{% if u.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Deactivated</span>{% endif %}</td>
@@ -36,7 +40,7 @@
         {% endif %}
       </td>
     </tr>
-  {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">{% if user.is_manager_role %}No employees are assigned to you yet. Ask the admin to assign employees to you.{% else %}No {{ role_label|lower }}s yet.{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">{% if user.is_manager_role %}No employees are assigned to you yet. Ask the admin to assign employees to you.{% else %}No {{ role_label|lower }}s yet.{% endif %}</td></tr>
   {% endfor %}
   </tbody></table></div></div>
 {% include "_pagination.html" %}

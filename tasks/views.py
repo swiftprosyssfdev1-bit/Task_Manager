@@ -36,11 +36,20 @@ class TaskListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_filter_form(self):
-        return TaskFilterForm(self.request.GET or None, user=self.request.user)
+        branch = self.request.session.get("active_branch", "") if self.request.user.is_admin_role else None
+        return TaskFilterForm(self.request.GET or None, user=self.request.user, branch=branch)
 
     def get_queryset(self):
         qs = (Task.objects.visible_to(self.request.user).filter(is_archived=False)
               .select_related("project__department", "assigned_to").prefetch_related("technologies").with_hours())
+        if self.request.user.is_admin_role:
+            if "branch" in self.request.GET:
+                branch = self.request.GET.get("branch", "").strip()
+                self.request.session["active_branch"] = branch
+            else:
+                branch = self.request.session.get("active_branch", "")
+            if branch:
+                qs = qs.filter(Q(assigned_to__branch=branch) | Q(project__branch=branch))
         form = self.get_filter_form()
         order = "-created_at"
         if form.is_valid():
@@ -109,6 +118,14 @@ class TaskCreateView(RoleRequiredMixin, TitleMixin, CreateView):
         initial = super().get_initial()
         if self.request.GET.get("project", "").isdigit():
             initial["project"] = int(self.request.GET["project"])
+        assigned_to = self.request.GET.get("assigned_to", "")
+        if assigned_to.isdigit():
+            initial["assignees"] = [int(assigned_to)]
+            if "project" not in initial:
+                emp_proj = Project.objects.managed_by(self.request.user).filter(
+                    is_active=True, memberships__user_id=int(assigned_to)).first()
+                if emp_proj:
+                    initial["project"] = emp_proj.pk
         return initial
 
     def get_context_data(self, **kwargs):
@@ -368,7 +385,12 @@ class AttachmentDeleteView(LoginRequiredMixin, View):
         else:
             back = redirect("task_detail", pk=att.comment.task_id)
         name = att.name
-        att.file.delete(save=False)
+        try:
+            if att.file:
+                att.file.close()
+                att.file.delete(save=False)
+        except Exception:
+            pass
         att.delete()
         messages.success(request, f"Removed {name}.")
         return back
