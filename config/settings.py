@@ -98,7 +98,6 @@ REQUIRE_MANAGER_REVIEW = env_bool("REQUIRE_MANAGER_REVIEW", True)
 # and the open-task count at which an employee is flagged as having a high workload.
 WEEKEND_DAY = (6)
 WORKLOAD_WARNING_OPEN_TASKS = int(os.environ.get("WORKLOAD_WARNING_OPEN_TASKS", "10"))
-
 # Email (password reset). Console backend in development; configure SMTP in production.
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
